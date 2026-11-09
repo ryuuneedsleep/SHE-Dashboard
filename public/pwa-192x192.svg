@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192" fill="none">
+  <!-- Background with Toyota-inspired corporate red and rounded corners -->
+  <rect width="192" height="192" rx="40" fill="#EB0A1E"/>
+  
+  <!-- Subtle inner gradient sheen -->
+  <rect width="192" height="192" rx="40" fill="url(#pwa-sheen)" opacity="0.15"/>
+  
+  <!-- Safety Shield Icon -->
+  <g transform="translate(48, 32)">
+    <!-- Shield Outline / Body -->
+    <path d="M48 6L14 18V48C14 74 29 97 48 106C67 97 82 74 82 48V18L48 6Z" fill="#FFFFFF"/>
+    <!-- Safety Cross Accent Inside Shield -->
+    <path d="M48 24V80" stroke="#EB0A1E" stroke-width="8" stroke-linecap="round"/>
+    <path d="M28 46H68" stroke="#EB0A1E" stroke-width="8" stroke-linecap="round"/>
+  </g>
+  
+  <!-- Typography Banner -->
+  <text x="96" y="156" text-anchor="middle" fill="#FFFFFF" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="19" letter-spacing="2">SPLD</text>
+  <text x="96" y="174" text-anchor="middle" fill="#FFFFFF" opacity="0.9" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-weight="700" font-size="11" letter-spacing="3">SAFETY</text>
+  
+  <defs>
+    <linearGradient id="pwa-sheen" x1="0" y1="0" x2="192" y2="192" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity="0.8"/>
+      <stop offset="0.6" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+</svg>
+
