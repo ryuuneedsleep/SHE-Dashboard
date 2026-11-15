@@ -1,146 +1,98 @@
-import { Suspense, lazy } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { Navbar } from './components/common/Navbar';
-import { Footer } from './components/common/Footer';
-import { PageLoadingFallback } from './components/common/PageLoadingFallback';
-import { WelcomePage } from './pages/WelcomePage';
-import { LoginPage } from './pages/LoginPage';
-import { RegistrationPendingPage } from './pages/RegistrationPendingPage';
-import { RegistrationSuccessPage } from './pages/RegistrationSuccessPage';
-import { ProtectedRoute } from './components/auth/ProtectedRoute';
-import { AdminRoute } from './components/auth/AdminRoute';
+import React, { Suspense, lazy } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { Navbar } from './components/common/Navbar.tsx';
+import { BottomNavigationBar } from './components/navigation/BottomNavigationBar.tsx';
+import { PageLoadingFallback } from './components/common/PageLoadingFallback.tsx';
+import { ProtectedRoute } from './components/auth/ProtectedRoute.tsx';
+import { LoginPage } from './pages/LoginPage.tsx';
+import { mockAuthService } from './services/mock/mockAuthService.ts';
 
-// Route-based code-splitting for high-overhead application modules
-const RegisterPage = lazy(() =>
-  import('./pages/RegisterPage').then((m) => ({ default: m.RegisterPage }))
-);
-const ForgotPasswordPage = lazy(() =>
-  import('./pages/ForgotPasswordPage').then((m) => ({ default: m.ForgotPasswordPage }))
-);
+// Route-based code-splitting for modern PWA performance
 const DashboardPage = lazy(() =>
-  import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage }))
-);
-const AdminPortalPage = lazy(() =>
-  import('./pages/admin/AdminPortalPage').then((m) => ({ default: m.AdminPortalPage }))
-);
-const MasterDataPage = lazy(() =>
-  import('./pages/admin/MasterDataPage').then((m) => ({ default: m.MasterDataPage }))
-);
-const PatrolsListPage = lazy(() =>
-  import('./pages/patrols/PatrolsListPage').then((m) => ({ default: m.PatrolsListPage }))
-);
-const PatrolDetailPage = lazy(() =>
-  import('./pages/patrols/PatrolDetailPage').then((m) => ({ default: m.PatrolDetailPage }))
+  import('./pages/DashboardPage.tsx').then((m) => ({ default: m.DashboardPage }))
 );
 const FindingsManagementPage = lazy(() =>
-  import('./pages/findings/FindingsManagementPage').then((m) => ({ default: m.FindingsManagementPage }))
+  import('./pages/findings/FindingsManagementPage.tsx').then((m) => ({
+    default: m.FindingsManagementPage,
+  }))
 );
 const FindingDetailPage = lazy(() =>
-  import('./pages/findings/FindingDetailPage').then((m) => ({ default: m.FindingDetailPage }))
+  import('./pages/findings/FindingDetailPage.tsx').then((m) => ({
+    default: m.FindingDetailPage,
+  }))
 );
-const MyFindingsPage = lazy(() =>
-  import('./pages/findings/MyFindingsPage').then((m) => ({ default: m.MyFindingsPage }))
+const CreateFindingPage = lazy(() =>
+  import('./pages/findings/CreateFindingPage.tsx').then((m) => ({
+    default: m.CreateFindingPage,
+  }))
 );
+const EditFindingPage = lazy(() =>
+  import('./pages/findings/EditFindingPage.tsx').then((m) => ({
+    default: m.EditFindingPage,
+  }))
+);
+const ProfilePage = lazy(() =>
+  import('./pages/ProfilePage.tsx').then((m) => ({ default: m.ProfilePage }))
+);
+const AboutPage = lazy(() =>
+  import('./pages/AboutPage.tsx').then((m) => ({ default: m.AboutPage }))
+);
+
+/**
+ * Root redirect: navigates to /dashboard if logged in, or /login if not.
+ */
+const RootRedirect: React.FC = () => {
+  const isAuth = mockAuthService.isAuthenticated();
+  return <Navigate to={isAuth ? '/dashboard' : '/login'} replace />;
+};
+
+/**
+ * Authenticated Layout: displays Top Navbar, Main Content, and Fixed Bottom Navigation Bar
+ */
+const AuthenticatedLayout: React.FC = () => {
+  return (
+    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 antialiased selection:bg-red-500 selection:text-white">
+      <Navbar />
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5">
+        <Suspense fallback={<PageLoadingFallback />}>
+          <Outlet />
+        </Suspense>
+      </main>
+      <BottomNavigationBar />
+    </div>
+  );
+};
 
 export function App() {
   return (
     <BrowserRouter>
-      <div className="min-h-screen flex flex-col bg-slate-50 text-gray-900">
-        <Navbar />
-        <main className="flex-1">
-          <Suspense fallback={<PageLoadingFallback />}>
-            <Routes>
-              <Route path="/" element={<WelcomePage />} />
-              <Route path="/welcome" element={<Navigate to="/" replace />} />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
-              <Route path="/registration-pending" element={<RegistrationPendingPage />} />
-              <Route path="/registration-success" element={<RegistrationSuccessPage />} />
-              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-              <Route
-                path="/dashboard"
-                element={
-                  <ProtectedRoute>
-                    <DashboardPage />
-                  </ProtectedRoute>
-                }
-              />
-              {/* Module 05: Safety Patrol Management */}
-              <Route
-                path="/patrols"
-                element={
-                  <ProtectedRoute>
-                    <PatrolsListPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/patrols/:id"
-                element={
-                  <ProtectedRoute>
-                    <PatrolDetailPage />
-                  </ProtectedRoute>
-                }
-              />
-              {/* Module 05: Safety Findings Management */}
-              <Route
-                path="/findings"
-                element={
-                  <ProtectedRoute>
-                    <FindingsManagementPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/findings/:id"
-                element={
-                  <ProtectedRoute>
-                    <FindingDetailPage />
-                  </ProtectedRoute>
-                }
-              />
-              {/* Module 05: Personal Findings for Members */}
-              <Route
-                path="/my-findings"
-                element={
-                  <ProtectedRoute>
-                    <MyFindingsPage />
-                  </ProtectedRoute>
-                }
-              />
-              {/* Module 03: QSHE Admin Master Data Management */}
-              <Route
-                path="/admin/master-data"
-                element={
-                  <AdminRoute>
-                    <MasterDataPage />
-                  </AdminRoute>
-                }
-              />
-              {/* Module 02: QSHE Admin User & Access Management */}
-              <Route
-                path="/admin"
-                element={
-                  <AdminRoute>
-                    <AdminPortalPage />
-                  </AdminRoute>
-                }
-              />
-              <Route
-                path="/admin/*"
-                element={
-                  <AdminRoute>
-                    <AdminPortalPage />
-                  </AdminRoute>
-                }
-              />
-              {/* Fallback */}
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </Suspense>
-        </main>
-        <Footer />
-      </div>
+      <Routes>
+        {/* Root Redirect */}
+        <Route path="/" element={<RootRedirect />} />
+
+        {/* Public Login Route */}
+        <Route path="/login" element={<LoginPage />} />
+
+        {/* Protected App Routes */}
+        <Route
+          element={
+            <ProtectedRoute>
+              <AuthenticatedLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/findings" element={<FindingsManagementPage />} />
+          <Route path="/findings/new" element={<CreateFindingPage />} />
+          <Route path="/findings/:id" element={<FindingDetailPage />} />
+          <Route path="/findings/:id/edit" element={<EditFindingPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/about" element={<AboutPage />} />
+        </Route>
+
+        {/* Catch-all Fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </BrowserRouter>
   );
 }

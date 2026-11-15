@@ -1,180 +1,238 @@
-import React, { useState, useRef } from 'react';
-import type { FindingEvidence } from '../../types/safety';
-import { Camera, Image as ImageIcon, Trash2, RefreshCw, AlertCircle, Info } from 'lucide-react';
-import { Button } from '../common/Button';
+import React, { useState, useRef, useEffect } from 'react';
+import type { FindingEvidence } from '../../types/finding.ts';
+import { Camera, Trash2, RefreshCw, AlertCircle, Info } from 'lucide-react';
 
 interface EvidenceUploadFieldProps {
-  evidence: FindingEvidence | null;
-  onChange: (evidence: FindingEvidence | null) => void;
+  evidences: FindingEvidence[];
+  onChange: (evidences: FindingEvidence[]) => void;
   disabled?: boolean;
+  maxFiles?: number;
 }
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
 export const EvidenceUploadField: React.FC<EvidenceUploadFieldProps> = ({
-  evidence,
+  evidences,
   onChange,
   disabled = false,
+  maxFiles = 3,
 }) => {
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const replaceIndexRef = useRef<number | null>(null);
+
+  // Track created object URLs for proper memory cleanup
+  const createdUrlsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    const urls = createdUrlsRef.current;
+    return () => {
+      // Cleanup all object URLs created by this component on unmount
+      for (const url of urls) {
+        if (url.startsWith('blob:')) {
+          URL.revokeObjectURL(url);
+        }
+      }
+      urls.clear();
+    };
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setError(null);
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
-    // 1. Validate File Type
+    const file = files[0];
+
+    // Validate type
     if (!ALLOWED_MIME_TYPES.includes(file.type)) {
       setError('Format file tidak didukung. Harap pilih gambar dengan format JPG, PNG, atau WEBP.');
       if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
 
-    // 2. Validate File Size (Max 5MB)
+    // Validate size
     if (file.size > MAX_FILE_SIZE_BYTES) {
-      setError(`Ukuran file terlalu besar (${(file.size / (1024 * 1024)).toFixed(1)} MB). Batas maksimum adalah 5 MB.`);
+      setError(`Ukuran file terlalu besar (${formatBytes(file.size)}). Batas maksimum per foto adalah 5 MB.`);
       if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
 
-    // 3. Convert to Base64 Data URL for in-memory prototype preview
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const previewUrl = event.target?.result as string;
-      const newEvidence: FindingEvidence = {
-        fileName: file.name,
-        fileSize: file.size,
-        fileType: file.type,
-        previewUrl,
-        uploadedAt: new Date().toISOString(),
-      };
-      onChange(newEvidence);
-    };
-    reader.onerror = () => {
-      setError('Gagal membaca file gambar. Silakan coba lagi.');
-    };
-    reader.readAsDataURL(file);
-  };
+    const objectUrl = URL.createObjectURL(file);
+    createdUrlsRef.current.add(objectUrl);
 
-  const handleRemove = () => {
-    setError(null);
-    onChange(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+    const newEvidence: FindingEvidence = {
+      id: `ev-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type,
+      url: objectUrl,
+      uploadedAt: new Date().toISOString(),
+    };
+
+    if (replaceIndexRef.current !== null) {
+      // Replace existing item
+      const idx = replaceIndexRef.current;
+      replaceIndexRef.current = null;
+      const oldItem = evidences[idx];
+      if (oldItem && oldItem.url.startsWith('blob:')) {
+        URL.revokeObjectURL(oldItem.url);
+        createdUrlsRef.current.delete(oldItem.url);
+      }
+      const updated = [...evidences];
+      updated[idx] = newEvidence;
+      onChange(updated);
+    } else {
+      // Add new item
+      if (evidences.length >= maxFiles) {
+        setError(`Maksimal ${maxFiles} foto per laporan.`);
+        if (objectUrl.startsWith('blob:')) {
+          URL.revokeObjectURL(objectUrl);
+          createdUrlsRef.current.delete(objectUrl);
+        }
+        return;
+      }
+      onChange([...evidences, newEvidence]);
     }
+
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const formatFileSize = (bytes: number): string => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  const handleDelete = (index: number) => {
+    setError(null);
+    const item = evidences[index];
+    if (item && item.url.startsWith('blob:')) {
+      URL.revokeObjectURL(item.url);
+      createdUrlsRef.current.delete(item.url);
+    }
+    const updated = evidences.filter((_, idx) => idx !== index);
+    onChange(updated);
+  };
+
+  const triggerReplace = (index: number) => {
+    replaceIndexRef.current = index;
+    fileInputRef.current?.click();
+  };
+
+  const triggerAdd = () => {
+    replaceIndexRef.current = null;
+    fileInputRef.current?.click();
   };
 
   return (
-    <div className="space-y-2.5">
-      <label className="block text-xs font-semibold text-gray-700">
-        Foto Bukti Temuan (Evidence Photo)
-        <span className="text-gray-400 font-normal ml-1">(JPG, PNG, WEBP maks. 5MB)</span>
-      </label>
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <label className="block text-xs font-semibold text-slate-700 tracking-wide uppercase">
+          Dokumentasi Bukti / Foto Temuan ({evidences.length}/{maxFiles})
+        </label>
+        <span className="text-[11px] text-slate-500 font-medium">Maks. 5 MB / foto (JPG, PNG, WebP)</span>
+      </div>
 
-      {/* Hidden native input */}
+      {/* Hidden File Input */}
       <input
         ref={fileInputRef}
         type="file"
         accept="image/jpeg,image/png,image/webp"
         onChange={handleFileChange}
-        disabled={disabled}
         className="hidden"
+        disabled={disabled}
       />
 
-      {/* Upload Dropzone / Empty State */}
-      {!evidence ? (
-        <div
-          onClick={() => !disabled && fileInputRef.current?.click()}
-          className={`border-2 border-dashed rounded-xl p-5 text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-2 ${
-            disabled
-              ? 'bg-gray-100 border-gray-300 cursor-not-allowed opacity-60'
-              : 'border-gray-300 hover:border-[#EB0A1E] hover:bg-red-50/30'
-          }`}
-        >
-          <div className="w-10 h-10 rounded-full bg-red-50 text-[#EB0A1E] flex items-center justify-center">
-            <Camera className="w-5 h-5" />
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-gray-800">
-              Klik untuk mengambil atau mengunggah foto bukti
-            </p>
-            <p className="text-[11px] text-gray-500 mt-0.5">
-              Dokumentasikan kondisi tidak aman atau tindakan bahaya di lapangan
-            </p>
-          </div>
-        </div>
-      ) : (
-        /* Preview Card with Meta & Actions */
-        <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 space-y-3">
-          <div className="flex items-start gap-3">
-            <div className="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-300 bg-white flex-shrink-0 flex items-center justify-center">
-              <img
-                src={evidence.previewUrl}
-                alt={evidence.fileName}
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-gray-900 truncate">
-                <ImageIcon className="w-3.5 h-3.5 text-[#EB0A1E] flex-shrink-0" />
-                <span className="truncate">{evidence.fileName}</span>
-              </div>
-              <p className="text-[11px] text-gray-500 mt-0.5">
-                Ukuran: {formatFileSize(evidence.fileSize)} • Format: {evidence.fileType}
-              </p>
-              <div className="mt-2 flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={disabled}
-                  leftIcon={<RefreshCw className="w-3 h-3" />}
-                  className="text-xs h-7 px-2.5"
-                >
-                  Ganti Foto
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleRemove}
-                  disabled={disabled}
-                  leftIcon={<Trash2 className="w-3 h-3 text-red-600" />}
-                  className="text-xs h-7 px-2.5 text-red-600 border-red-200 hover:bg-red-50"
-                >
-                  Hapus
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Validation Error Message */}
+      {/* Error alert */}
       {error && (
-        <div className="flex items-center gap-1.5 text-xs text-red-600 font-medium">
-          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+        <div className="flex items-center gap-2 p-2.5 bg-rose-50 border border-rose-200 rounded-lg text-rose-700 text-xs">
+          <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
           <span>{error}</span>
         </div>
       )}
 
-      {/* Prototype Storage Disclosure */}
-      <div className="flex items-start gap-1.5 text-[10px] text-gray-500 bg-gray-100/70 p-2 rounded-lg border border-gray-200">
-        <Info className="w-3.5 h-3.5 text-gray-400 flex-shrink-0 mt-0.5" />
+      {/* Gallery / List of Evidences */}
+      {evidences.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {evidences.map((item, index) => (
+            <div
+              key={item.id || index}
+              className="relative group bg-slate-50 border border-slate-200 rounded-xl overflow-hidden shadow-sm"
+            >
+              <div className="relative aspect-video w-full bg-slate-100 overflow-hidden">
+                <img
+                  src={item.url}
+                  alt={item.fileName}
+                  className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).src =
+                      'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="%2394a3b8" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>';
+                  }}
+                />
+                <div className="absolute top-1.5 right-1.5 flex items-center gap-1">
+                  {!disabled && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => triggerReplace(index)}
+                        className="p-1 rounded-md bg-white/90 text-slate-700 hover:text-blue-600 hover:bg-white shadow transition"
+                        title="Ganti foto"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(index)}
+                        className="p-1 rounded-md bg-white/90 text-slate-700 hover:text-red-600 hover:bg-white shadow transition"
+                        title="Hapus foto"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+              <div className="p-2 text-xs">
+                <p className="font-medium text-slate-800 truncate" title={item.fileName}>
+                  {item.fileName}
+                </p>
+                <p className="text-[10px] text-slate-500 mt-0.5">
+                  {formatBytes(item.fileSize)}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Add Button if less than maxFiles */}
+      {!disabled && evidences.length < maxFiles && (
+        <button
+          type="button"
+          onClick={triggerAdd}
+          className="w-full border-2 border-dashed border-slate-300 hover:border-red-400 bg-slate-50 hover:bg-red-50/30 rounded-xl p-4 flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer group"
+        >
+          <div className="w-10 h-10 rounded-full bg-white group-hover:bg-red-100 flex items-center justify-center text-slate-400 group-hover:text-red-600 shadow-sm transition">
+            <Camera className="w-5 h-5" />
+          </div>
+          <span className="text-xs font-semibold text-slate-700 group-hover:text-red-600">
+            {evidences.length === 0 ? 'Ambil atau Pilih Foto Bukti' : 'Tambah Foto Bukti Lainnya'}
+          </span>
+          <span className="text-[11px] text-slate-500">
+            Format: JPG, PNG, atau WEBP (Maksimal {maxFiles} foto)
+          </span>
+        </button>
+      )}
+
+      {/* Prototype Disclosure Notice */}
+      <div className="flex items-start gap-2 p-2.5 bg-blue-50/70 border border-blue-200/80 rounded-lg text-slate-600 text-[11px] leading-relaxed">
+        <Info className="w-3.5 h-3.5 text-blue-600 mt-0.5 shrink-0" />
         <span>
-          <strong>Keterbatasan Prototipe:</strong> Foto bukti disimpan sementara dalam memori sesi (Data URL) untuk simulasi demo. Pada versi produksi, data akan ditransfer ke secure cloud object storage.
+          <strong>Demo Mode:</strong> Foto hanya ditampilkan sementara di memori browser dan belum terhubung ke cloud storage.
         </span>
       </div>
     </div>
   );
 };
-
