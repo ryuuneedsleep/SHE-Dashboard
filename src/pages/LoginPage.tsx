@@ -101,7 +101,7 @@ export const LoginPage: React.FC = () => {
                 <input
                   type="email"
                   {...register('email')}
-                  placeholder="admin@toyota.co.id"
+                  placeholder="admin@spld-safety.test"
                   className="w-full text-xs rounded-xl border border-slate-200 pl-9 pr-3 py-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-red-500"
                 />
               </div>

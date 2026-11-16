@@ -130,6 +130,21 @@ export class MockFindingService {
     }
 
     const current = this.findings[index];
+
+    // Status transition validation:
+    // OPEN -> IN_PROGRESS -> CLOSED (Terminal status)
+    if (input.status && input.status !== current.status) {
+      if (current.status === 'CLOSED') {
+        throw new Error('Laporan dengan status CLOSED telah selesai dan statusnya tidak dapat diubah kembali.');
+      }
+      if (current.status === 'OPEN' && input.status !== 'IN_PROGRESS') {
+        throw new Error('Laporan berstatus OPEN hanya dapat ditransisikan ke IN_PROGRESS.');
+      }
+      if (current.status === 'IN_PROGRESS' && input.status !== 'CLOSED') {
+        throw new Error('Laporan berstatus IN_PROGRESS hanya dapat ditransisikan ke CLOSED.');
+      }
+    }
+
     const now = new Date().toISOString();
 
     const updated: FindingRecord = {

@@ -118,7 +118,7 @@ export const ProfilePage: React.FC = () => {
                 <div className="flex-1 min-w-0">
                   <span className="text-[10px] text-slate-400 block uppercase font-bold">Email</span>
                   <span className="font-semibold text-slate-800 truncate block">
-                    {currentUser?.email || 'admin@toyota.co.id'}
+                    {currentUser?.email || 'admin@spld-safety.test'}
                   </span>
                 </div>
               </div>
