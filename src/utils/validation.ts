@@ -6,9 +6,6 @@
 import { z } from 'zod';
 import {
   DEPARTMENT_LIST,
-  FINDING_CATEGORY_LIST,
-  HAZARD_CATEGORY_LIST,
-  RISK_LEVEL_LIST,
   FINDING_STATUS_LIST,
 } from '../types/finding.ts';
 
@@ -57,15 +54,42 @@ export const findingFormSchema = z
       .trim()
       .min(5, 'Deskripsi temuan minimal 5 karakter'),
     findingCategory: z.enum(
-      FINDING_CATEGORY_LIST as [string, ...string[]],
+      [
+        'UNSAFE_CONDITION',
+        'UNSAFE_ACTION',
+        'IMPROVEMENT_OPPORTUNITY',
+        'Unsafe Condition',
+        'Unsafe Action',
+        'Improvement Opportunity',
+      ] as [string, ...string[]],
       { error: 'Pilih kategori temuan yang valid' }
     ),
     hazardCategory: z
-      .enum(HAZARD_CATEGORY_LIST as [string, ...string[]])
+      .enum([
+        'PHYSICAL',
+        'CHEMICAL',
+        'BIOLOGICAL',
+        'ERGONOMIC',
+        'ENVIRONMENTAL',
+        'Physical',
+        'Chemical',
+        'Biological',
+        'Ergonomic',
+        'Environmental',
+      ] as [string, ...string[]])
       .optional()
       .or(z.literal('')),
     riskLevel: z.enum(
-      RISK_LEVEL_LIST as [string, ...string[]],
+      [
+        'LOW',
+        'MEDIUM',
+        'HIGH',
+        'CRITICAL',
+        'Low',
+        'Medium',
+        'High',
+        'Critical',
+      ] as [string, ...string[]],
       { error: 'Pilih tingkat risiko yang valid' }
     ),
     findingDate: z

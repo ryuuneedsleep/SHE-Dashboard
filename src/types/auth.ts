@@ -6,6 +6,7 @@
 export interface AdminUser {
   id: string;
   name: string;
+  fullName: string;
   email: string;
   phone: string;
   position: string;

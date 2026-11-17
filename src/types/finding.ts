@@ -3,11 +3,35 @@
  * Finding Types & Models
  */
 
-export type FindingCategory = 'Unsafe Condition' | 'Unsafe Action' | 'Improvement Opportunity';
+export type FindingCategory =
+  | 'UNSAFE_CONDITION'
+  | 'UNSAFE_ACTION'
+  | 'IMPROVEMENT_OPPORTUNITY'
+  | 'Unsafe Condition'
+  | 'Unsafe Action'
+  | 'Improvement Opportunity';
 
-export type HazardCategory = 'Physical' | 'Chemical' | 'Biological' | 'Ergonomic' | 'Environmental';
+export type HazardCategory =
+  | 'PHYSICAL'
+  | 'CHEMICAL'
+  | 'BIOLOGICAL'
+  | 'ERGONOMIC'
+  | 'ENVIRONMENTAL'
+  | 'Physical'
+  | 'Chemical'
+  | 'Biological'
+  | 'Ergonomic'
+  | 'Environmental';
 
-export type RiskLevel = 'Low' | 'Medium' | 'High' | 'Critical';
+export type RiskLevel =
+  | 'LOW'
+  | 'MEDIUM'
+  | 'HIGH'
+  | 'CRITICAL'
+  | 'Low'
+  | 'Medium'
+  | 'High'
+  | 'Critical';
 
 export type FindingStatus = 'OPEN' | 'IN_PROGRESS' | 'CLOSED';
 
@@ -28,6 +52,17 @@ export interface FindingEvidence {
   uploadedAt: string;
 }
 
+export interface FindingStatusHistoryItem {
+  id: string;
+  findingId: string;
+  oldStatus: FindingStatus | null;
+  newStatus: FindingStatus;
+  note?: string | null;
+  changedByAdminId?: string | null;
+  changedByName?: string;
+  createdAt: string;
+}
+
 export interface FindingRecord {
   id: string;
   referenceNo: string;
@@ -42,7 +77,9 @@ export interface FindingRecord {
   reporterName: string;
   reporterDepartment: DepartmentOption;
   otherDepartmentName?: string;
+  reporterOtherDepartment?: string;
   reporterSection: string;
+  reporterSectionArea?: string;
 
   // Location
   operationalArea: string;
@@ -52,8 +89,10 @@ export interface FindingRecord {
   correctiveAction?: string;
   dueDate?: string;
 
-  // Status
+  // Status & Lifecycle
   status: FindingStatus;
+  statusHistory?: FindingStatusHistoryItem[];
+  closedAt?: string | null;
 
   // Evidence
   evidences: FindingEvidence[];
@@ -92,11 +131,33 @@ export interface FindingFilters {
   status?: FindingStatus | 'ALL';
   riskLevel?: RiskLevel | 'ALL';
   findingCategory?: FindingCategory | 'ALL';
+  hazardCategory?: HazardCategory | 'ALL';
   department?: DepartmentOption | 'ALL';
   startDate?: string;
   endDate?: string;
   operationalArea?: string | 'ALL';
 }
+
+export const FINDING_CATEGORY_OPTIONS = [
+  { value: 'UNSAFE_CONDITION', label: 'Unsafe Condition' },
+  { value: 'UNSAFE_ACTION', label: 'Unsafe Action' },
+  { value: 'IMPROVEMENT_OPPORTUNITY', label: 'Improvement Opportunity' },
+] as const;
+
+export const HAZARD_CATEGORY_OPTIONS = [
+  { value: 'PHYSICAL', label: 'Physical' },
+  { value: 'CHEMICAL', label: 'Chemical' },
+  { value: 'BIOLOGICAL', label: 'Biological' },
+  { value: 'ERGONOMIC', label: 'Ergonomic' },
+  { value: 'ENVIRONMENTAL', label: 'Environmental' },
+] as const;
+
+export const RISK_LEVEL_OPTIONS = [
+  { value: 'LOW', label: 'Low' },
+  { value: 'MEDIUM', label: 'Medium' },
+  { value: 'HIGH', label: 'High' },
+  { value: 'CRITICAL', label: 'Critical' },
+] as const;
 
 export const DEPARTMENT_LIST: DepartmentOption[] = [
   'Warehouse',

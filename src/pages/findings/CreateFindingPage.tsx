@@ -2,14 +2,14 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { mockFindingService } from '../../services/mock/mockFindingService.ts';
+import { findingService } from '../../services/findingService.ts';
 import { findingFormSchema, type FindingFormData } from '../../utils/validation.ts';
 import type { FindingEvidence, DepartmentOption, FindingCategory, HazardCategory, RiskLevel } from '../../types/finding.ts';
 import {
   DEPARTMENT_LIST,
-  FINDING_CATEGORY_LIST,
-  HAZARD_CATEGORY_LIST,
-  RISK_LEVEL_LIST,
+  FINDING_CATEGORY_OPTIONS,
+  HAZARD_CATEGORY_OPTIONS,
+  RISK_LEVEL_OPTIONS,
   OPERATIONAL_AREA_LIST,
 } from '../../types/finding.ts';
 import { EvidenceUploadField } from '../../components/findings/EvidenceUploadField.tsx';
@@ -62,7 +62,7 @@ export const CreateFindingPage: React.FC = () => {
     setSubmitError(null);
 
     try {
-      const created = await mockFindingService.createFinding({
+      const created = await findingService.createFinding({
         title: data.title,
         description: data.description,
         findingCategory: data.findingCategory as FindingCategory,
@@ -77,7 +77,6 @@ export const CreateFindingPage: React.FC = () => {
         locationDetail: data.locationDetail,
         correctiveAction: data.correctiveAction || undefined,
         dueDate: data.dueDate || undefined,
-        evidences,
       });
 
       navigate(`/findings/${created.id}`);
@@ -249,9 +248,9 @@ export const CreateFindingPage: React.FC = () => {
                   {...register('findingCategory')}
                   className="w-full text-xs rounded-xl border border-slate-200 py-2 px-3 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-red-500"
                 >
-                  {FINDING_CATEGORY_LIST.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
+                  {FINDING_CATEGORY_OPTIONS.map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {c.label}
                     </option>
                   ))}
                 </select>
@@ -270,9 +269,9 @@ export const CreateFindingPage: React.FC = () => {
                   className="w-full text-xs rounded-xl border border-slate-200 py-2 px-3 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-red-500"
                 >
                   <option value="">Pilih Kategori Bahaya</option>
-                  {HAZARD_CATEGORY_LIST.map((h) => (
-                    <option key={h} value={h}>
-                      {h}
+                  {HAZARD_CATEGORY_OPTIONS.map((h) => (
+                    <option key={h.value} value={h.value}>
+                      {h.label}
                     </option>
                   ))}
                 </select>
@@ -287,9 +286,9 @@ export const CreateFindingPage: React.FC = () => {
                   {...register('riskLevel')}
                   className="w-full text-xs rounded-xl border border-slate-200 py-2 px-3 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-red-500"
                 >
-                  {RISK_LEVEL_LIST.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
+                  {RISK_LEVEL_OPTIONS.map((r) => (
+                    <option key={r.value} value={r.value}>
+                      {r.label}
                     </option>
                   ))}
                 </select>
@@ -397,6 +396,9 @@ export const CreateFindingPage: React.FC = () => {
 
         {/* Section 5: Evidence Upload (Max 3 Photos) */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+          <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-800 text-xs">
+            <span className="font-bold">Informasi Dokumentasi:</span> Unggah foto bukti saat ini berfungsi sebagai pratinjau lokal. Penyimpanan bukti foto ke Cloud Storage (Vercel Blob) akan diintegrasikan pada <strong>Phase 5</strong>.
+          </div>
           <EvidenceUploadField
             evidences={evidences}
             onChange={setEvidences}

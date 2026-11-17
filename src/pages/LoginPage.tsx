@@ -1,29 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { loginSchema, type LoginFormData } from '../utils/validation.ts';
-import { mockAuthService, DEMO_ADMIN_USER } from '../services/mock/mockAuthService.ts';
+import { useAuth } from '../context/useAuth.ts';
 import { BrandLogo } from '../components/common/BrandLogo.tsx';
 import {
   Mail,
   Lock,
   AlertCircle,
   ArrowRight,
-  ShieldAlert,
-  Sparkles,
+  ShieldCheck,
 } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [isLoading, setIsLoading] = useState(false);
+  const { login, isAuthenticated } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const from =
+    (location.state as { from?: { pathname: string } })?.from?.pathname || '/dashboard';
+
+  // If already authenticated, redirect immediately
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate(from, { replace: true });
+    }
+  }, [isAuthenticated, navigate, from]);
 
   const {
     register,
     handleSubmit,
-    setValue,
     formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -34,28 +43,25 @@ export const LoginPage: React.FC = () => {
   });
 
   const onSubmit = async (values: LoginFormData) => {
-    setIsLoading(true);
+    setIsSubmitting(true);
     setErrorMessage(null);
 
     try {
-      await mockAuthService.login({
+      await login({
         email: values.email,
         password: values.password,
       });
 
-      const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/dashboard';
       navigate(from, { replace: true });
     } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : 'Login gagal. Periksa email dan password.');
+      setErrorMessage(
+        err instanceof Error
+          ? err.message
+          : 'Login gagal. Periksa kembali email dan password Anda.'
+      );
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
-  };
-
-  const fillDemoCredentials = () => {
-    setValue('email', DEMO_ADMIN_USER.email);
-    setValue('password', 'demo1234');
-    setErrorMessage(null);
   };
 
   return (
@@ -74,12 +80,10 @@ export const LoginPage: React.FC = () => {
           </p>
         </div>
 
-        {/* Demo Mode Indicator Banner */}
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2.5 text-xs text-amber-900">
-          <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-          <div>
-            <span className="font-bold">DEMO MODE:</span> Authentication belum terhubung ke backend server. Anda dapat masuk sebagai akun administrator demo.
-          </div>
+        {/* Security Badge */}
+        <div className="bg-slate-100/80 border border-slate-200 rounded-xl p-2.5 flex items-center justify-center gap-2 text-xs text-slate-600 font-medium">
+          <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+          <span>Autentikasi Terenkripsi & Sesi Database Neon</span>
         </div>
 
         {/* Login Card */}
@@ -102,6 +106,7 @@ export const LoginPage: React.FC = () => {
                   type="email"
                   {...register('email')}
                   placeholder="admin@spld-safety.test"
+                  autoComplete="email"
                   className="w-full text-xs rounded-xl border border-slate-200 pl-9 pr-3 py-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-red-500"
                 />
               </div>
@@ -119,7 +124,8 @@ export const LoginPage: React.FC = () => {
                 <input
                   type="password"
                   {...register('password')}
-                  placeholder="••••••••"
+                  placeholder="••••••••••••"
+                  autoComplete="current-password"
                   className="w-full text-xs rounded-xl border border-slate-200 pl-9 pr-3 py-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-red-500"
                 />
               </div>
@@ -130,25 +136,13 @@ export const LoginPage: React.FC = () => {
 
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isSubmitting}
               className="w-full py-2.5 px-4 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold shadow-sm transition hover:shadow flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
             >
-              <span>{isLoading ? 'Sedang Masuk...' : 'Masuk ke Dashboard'}</span>
+              <span>{isSubmitting ? 'Memverifikasi Sesi...' : 'Masuk ke Dashboard'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>
-
-          {/* Quick Demo Fill */}
-          <div className="pt-3 border-t border-slate-100 text-center">
-            <button
-              type="button"
-              onClick={fillDemoCredentials}
-              className="w-full py-2 px-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-              <span>Isi Kredensial Admin Demo</span>
-            </button>
-          </div>
         </div>
 
         <p className="text-center text-[11px] text-slate-400">
@@ -158,3 +152,5 @@ export const LoginPage: React.FC = () => {
     </div>
   );
 };
+
+export default LoginPage;

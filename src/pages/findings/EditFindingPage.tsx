@@ -2,26 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { mockFindingService } from '../../services/mock/mockFindingService.ts';
+import { findingService } from '../../services/findingService.ts';
 import { findingFormSchema, type FindingFormData } from '../../utils/validation.ts';
 import type {
   FindingRecord,
-  FindingEvidence,
   DepartmentOption,
   FindingCategory,
   HazardCategory,
   RiskLevel,
-  FindingStatus,
 } from '../../types/finding.ts';
 import {
   DEPARTMENT_LIST,
-  FINDING_CATEGORY_LIST,
-  HAZARD_CATEGORY_LIST,
-  RISK_LEVEL_LIST,
+  FINDING_CATEGORY_OPTIONS,
+  HAZARD_CATEGORY_OPTIONS,
+  RISK_LEVEL_OPTIONS,
   OPERATIONAL_AREA_LIST,
-  FINDING_STATUS_LIST,
 } from '../../types/finding.ts';
-import { EvidenceUploadField } from '../../components/findings/EvidenceUploadField.tsx';
+import { StatusBadge } from '../../components/common/StatusBadge.tsx';
 import {
   ArrowLeft,
   Save,
@@ -29,8 +26,42 @@ import {
   AlertTriangle,
   MapPin,
   CheckCircle2,
-  Activity,
+  FileText,
+  Info,
+  Check,
 } from 'lucide-react';
+
+function toCategoryEnum(val?: string): FindingCategory {
+  if (!val) return 'UNSAFE_CONDITION';
+  const clean = val.replace(/[\s-]/g, '_').toUpperCase();
+  if (clean.includes('ACTION')) return 'UNSAFE_ACTION';
+  if (clean.includes('IMPROVEMENT') || clean.includes('OPPORTUNITY')) return 'IMPROVEMENT_OPPORTUNITY';
+  return 'UNSAFE_CONDITION';
+}
+
+function toHazardEnum(val?: string): HazardCategory | '' {
+  if (!val) return '';
+  const clean = val.replace(/[\s-]/g, '_').toUpperCase();
+  if (['PHYSICAL', 'CHEMICAL', 'BIOLOGICAL', 'ERGONOMIC', 'ENVIRONMENTAL'].includes(clean)) {
+    return clean as HazardCategory;
+  }
+  return '';
+}
+
+function toRiskEnum(val?: string): RiskLevel {
+  if (!val) return 'LOW';
+  const clean = val.replace(/[\s-]/g, '_').toUpperCase();
+  if (['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].includes(clean)) {
+    return clean as RiskLevel;
+  }
+  return 'LOW';
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
 
 export const EditFindingPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -38,9 +69,9 @@ export const EditFindingPage: React.FC = () => {
 
   const [finding, setFinding] = useState<FindingRecord | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [evidences, setEvidences] = useState<FindingEvidence[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const {
     register,
@@ -53,49 +84,56 @@ export const EditFindingPage: React.FC = () => {
   });
 
   const selectedDepartment = useWatch({ control, name: 'reporterDepartment' });
-  const currentStatus = useWatch({ control, name: 'status' });
-
-  // Terminal & Linear Status Transition Rule: OPEN -> IN_PROGRESS -> CLOSED
-  const isStatusDisabled = (targetStatus: FindingStatus) => {
-    if (!finding) return false;
-    if (finding.status === 'CLOSED') return targetStatus !== 'CLOSED';
-    if (finding.status === 'OPEN') return targetStatus === 'CLOSED';
-    if (finding.status === 'IN_PROGRESS') return targetStatus === 'OPEN';
-    return false;
-  };
 
   useEffect(() => {
     if (!id) return;
+    let active = true;
+
     const fetchFinding = async () => {
       setIsLoading(true);
       try {
-        const item = await mockFindingService.getFindingById(id);
-        if (item) {
+        const item = await findingService.getFindingById(id);
+        if (item && active) {
           setFinding(item);
-          setEvidences(item.evidences || []);
           reset({
-            reporterName: item.reporterName,
-            reporterDepartment: item.reporterDepartment,
-            otherDepartmentName: item.otherDepartmentName || '',
-            reporterSection: item.reporterSection,
-            title: item.title,
-            description: item.description,
-            findingCategory: item.findingCategory,
-            hazardCategory: item.hazardCategory || '',
-            riskLevel: item.riskLevel,
-            findingDate: item.findingDate,
-            operationalArea: item.operationalArea,
-            locationDetail: item.locationDetail,
+            reporterName: item.reporterName || '',
+            reporterDepartment: item.reporterDepartment as DepartmentOption,
+            otherDepartmentName:
+              item.otherDepartmentName ||
+              (item as unknown as { reporterOtherDepartment?: string }).reporterOtherDepartment ||
+              '',
+            reporterSection:
+              item.reporterSection ||
+              (item as unknown as { reporterSectionArea?: string }).reporterSectionArea ||
+              '',
+            title: item.title || '',
+            description: item.description || '',
+            findingCategory: toCategoryEnum(item.findingCategory),
+            hazardCategory: toHazardEnum(item.hazardCategory),
+            riskLevel: toRiskEnum(item.riskLevel),
+            findingDate: item.findingDate ? item.findingDate.split('T')[0] : '',
+            operationalArea: item.operationalArea || '',
+            locationDetail: item.locationDetail || '',
             correctiveAction: item.correctiveAction || '',
-            dueDate: item.dueDate || '',
-            status: item.status,
+            dueDate: item.dueDate ? item.dueDate.split('T')[0] : '',
           });
         }
+      } catch (err) {
+        if (active) {
+          setSubmitError(err instanceof Error ? err.message : 'Gagal mengambil data temuan.');
+        }
       } finally {
-        setIsLoading(false);
+        if (active) {
+          setIsLoading(false);
+        }
       }
     };
+
     fetchFinding();
+
+    return () => {
+      active = false;
+    };
   }, [id, reset]);
 
   const onSubmit = async (data: FindingFormData) => {
@@ -104,26 +142,38 @@ export const EditFindingPage: React.FC = () => {
     setSubmitError(null);
 
     try {
-      await mockFindingService.updateFinding(id, {
-        title: data.title,
-        description: data.description,
+      const otherDept =
+        data.reporterDepartment === 'Lain-lain'
+          ? data.otherDepartmentName?.trim() || null
+          : null;
+
+      await findingService.updateFinding(id, {
+        title: data.title.trim(),
+        description: data.description.trim(),
         findingCategory: data.findingCategory as FindingCategory,
         hazardCategory: (data.hazardCategory as HazardCategory) || undefined,
         riskLevel: data.riskLevel as RiskLevel,
         findingDate: data.findingDate,
-        reporterName: data.reporterName,
+        reporterName: data.reporterName.trim(),
         reporterDepartment: data.reporterDepartment as DepartmentOption,
-        otherDepartmentName: data.otherDepartmentName || undefined,
-        reporterSection: data.reporterSection,
+        otherDepartmentName: otherDept || undefined,
+        reporterSection: data.reporterSection.trim(),
         operationalArea: data.operationalArea,
-        locationDetail: data.locationDetail,
-        correctiveAction: data.correctiveAction || undefined,
-        dueDate: data.dueDate || undefined,
-        status: (data.status as FindingStatus) || finding?.status || 'OPEN',
-        evidences,
+        locationDetail: data.locationDetail.trim(),
+        correctiveAction: data.correctiveAction?.trim() || undefined,
+        dueDate: data.dueDate?.trim() || undefined,
       });
 
-      navigate(`/findings/${id}`);
+      // Verify persistence from Neon database
+      const refreshed = await findingService.getFindingById(id);
+      if (refreshed) {
+        setFinding(refreshed);
+      }
+
+      setIsSuccess(true);
+      setTimeout(() => {
+        navigate(`/findings/${id}`);
+      }, 700);
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'Gagal memperbarui laporan temuan.');
     } finally {
@@ -136,6 +186,7 @@ export const EditFindingPage: React.FC = () => {
       <div className="max-w-2xl mx-auto space-y-4 animate-pulse pb-20">
         <div className="h-8 bg-slate-200 rounded w-1/3" />
         <div className="h-64 bg-slate-200 rounded-xl" />
+        <div className="h-40 bg-slate-200 rounded-xl" />
       </div>
     );
   }
@@ -147,10 +198,13 @@ export const EditFindingPage: React.FC = () => {
           <AlertTriangle className="w-6 h-6" />
         </div>
         <h2 className="text-base font-bold text-slate-900">Laporan Tidak Ditemukan</h2>
+        <p className="text-xs text-slate-500">
+          Laporan dengan ID &quot;{id}&quot; tidak ditemukan dalam dataset sistem.
+        </p>
         <button
           type="button"
           onClick={() => navigate('/findings')}
-          className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-xs font-semibold text-slate-700 inline-flex items-center gap-1.5"
+          className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-xs font-semibold text-slate-700 inline-flex items-center gap-1.5 cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Kembali ke Daftar Temuan</span>
@@ -162,12 +216,12 @@ export const EditFindingPage: React.FC = () => {
   return (
     <div className="max-w-2xl mx-auto space-y-6 pb-24">
       {/* Header */}
-      <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-200">
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => navigate(`/findings/${finding.id}`)}
-            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition"
+            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition cursor-pointer"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
@@ -181,10 +235,23 @@ export const EditFindingPage: React.FC = () => {
               </span>
             </div>
             <p className="text-xs text-slate-500">
-              Perbarui rincian laporan atau ubah status tindak lanjut (OPEN, IN PROGRESS, CLOSED)
+              Perbarui rincian laporan kondisi berbahaya, tindakan tidak aman, atau usulan perbaikan
             </p>
           </div>
         </div>
+
+        {/* Read-Only Status Badge */}
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <span className="text-[11px] text-slate-500 font-medium">Status:</span>
+          <StatusBadge status={finding.status} size="sm" />
+        </div>
+      </div>
+
+      {/* Read-only Status Notice */}
+      <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-[11px] text-slate-600 flex items-center justify-between">
+        <span>
+          Status laporan saat ini: <strong className="text-slate-800">{finding.status}</strong>. Status dikelola secara aman melalui tombol <strong>Ubah Status</strong> pada halaman Detail Temuan.
+        </span>
       </div>
 
       {submitError && (
@@ -194,63 +261,14 @@ export const EditFindingPage: React.FC = () => {
         </div>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {/* Status Lifecycle Selector */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-3">
-          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 uppercase tracking-wide border-b border-slate-100 pb-2">
-            <Activity className="w-4 h-4 text-red-600" />
-            <span>Status Tindak Lanjut Temuan</span>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Status Laporan <span className="text-red-500">*</span>
-            </label>
-            {finding.status === 'CLOSED' ? (
-              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 font-medium flex items-center justify-between">
-                <span>Status laporan ini adalah <strong>CLOSED</strong> (Terminal). Laporan telah selesai ditindaklanjuti dan status tidak dapat diubah kembali.</span>
-                <span className="font-bold bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded text-[11px]">CLOSED</span>
-              </div>
-            ) : (
-              <>
-                <div className="grid grid-cols-3 gap-2.5">
-                  {FINDING_STATUS_LIST.map((st) => {
-                    const disabled = isStatusDisabled(st);
-                    const isSelected = currentStatus === st;
-                    return (
-                      <label
-                        key={st}
-                        className={`flex items-center justify-center py-2 px-3 rounded-xl border text-xs font-bold transition ${
-                          disabled
-                            ? 'opacity-40 cursor-not-allowed bg-slate-100 border-slate-200 text-slate-400'
-                            : isSelected
-                            ? 'bg-red-50 border-red-500 text-red-700 ring-1 ring-red-500 cursor-pointer'
-                            : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-white cursor-pointer'
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          value={st}
-                          disabled={disabled}
-                          {...register('status')}
-                          className="sr-only"
-                        />
-                        <span>{st.replace('_', ' ')}</span>
-                      </label>
-                    );
-                  })}
-                </div>
-                <p className="text-[11px] text-slate-500 mt-1">
-                  Aturan siklus hidup: OPEN &rarr; IN PROGRESS &rarr; CLOSED (Terminal)
-                </p>
-              </>
-            )}
-            {errors.status && (
-              <p className="text-[11px] text-red-500 mt-1">{errors.status.message}</p>
-            )}
-          </div>
+      {isSuccess && (
+        <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs flex items-center gap-2">
+          <Check className="w-4 h-4 shrink-0 text-emerald-600" />
+          <span>Perubahan temuan berhasil disimpan ke Neon PostgreSQL. Mengalihkan...</span>
         </div>
+      )}
 
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* Section 1: Reporter Information */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
           <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 uppercase tracking-wide border-b border-slate-100 pb-2">
@@ -296,6 +314,7 @@ export const EditFindingPage: React.FC = () => {
                 </label>
                 <input
                   type="text"
+                  placeholder="Sebutkan nama departemen atau instansi luar..."
                   {...register('otherDepartmentName')}
                   className="w-full text-xs rounded-xl border border-slate-200 py-2 px-3 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-red-500"
                 />
@@ -366,12 +385,15 @@ export const EditFindingPage: React.FC = () => {
                   {...register('findingCategory')}
                   className="w-full text-xs rounded-xl border border-slate-200 py-2 px-3 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-red-500"
                 >
-                  {FINDING_CATEGORY_LIST.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
+                  {FINDING_CATEGORY_OPTIONS.map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {c.label}
                     </option>
                   ))}
                 </select>
+                {errors.findingCategory && (
+                  <p className="text-[11px] text-red-500 mt-1">{errors.findingCategory.message}</p>
+                )}
               </div>
 
               <div>
@@ -383,9 +405,9 @@ export const EditFindingPage: React.FC = () => {
                   className="w-full text-xs rounded-xl border border-slate-200 py-2 px-3 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-red-500"
                 >
                   <option value="">Pilih Kategori Bahaya</option>
-                  {HAZARD_CATEGORY_LIST.map((h) => (
-                    <option key={h} value={h}>
-                      {h}
+                  {HAZARD_CATEGORY_OPTIONS.map((h) => (
+                    <option key={h.value} value={h.value}>
+                      {h.label}
                     </option>
                   ))}
                 </select>
@@ -399,12 +421,15 @@ export const EditFindingPage: React.FC = () => {
                   {...register('riskLevel')}
                   className="w-full text-xs rounded-xl border border-slate-200 py-2 px-3 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-red-500"
                 >
-                  {RISK_LEVEL_LIST.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
+                  {RISK_LEVEL_OPTIONS.map((r) => (
+                    <option key={r.value} value={r.value}>
+                      {r.label}
                     </option>
                   ))}
                 </select>
+                {errors.riskLevel && (
+                  <p className="text-[11px] text-red-500 mt-1">{errors.riskLevel.message}</p>
+                )}
               </div>
 
               <div>
@@ -416,6 +441,9 @@ export const EditFindingPage: React.FC = () => {
                   {...register('findingDate')}
                   className="w-full text-xs rounded-xl border border-slate-200 py-2 px-3 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-red-500"
                 />
+                {errors.findingDate && (
+                  <p className="text-[11px] text-red-500 mt-1">{errors.findingDate.message}</p>
+                )}
               </div>
             </div>
           </div>
@@ -443,6 +471,9 @@ export const EditFindingPage: React.FC = () => {
                   </option>
                 ))}
               </select>
+              {errors.operationalArea && (
+                <p className="text-[11px] text-red-500 mt-1">{errors.operationalArea.message}</p>
+              )}
             </div>
 
             <div>
@@ -471,10 +502,11 @@ export const EditFindingPage: React.FC = () => {
           <div className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Rencana Tindakan Perbaikan
+                Rencana Tindakan Perbaikan (Opsional)
               </label>
               <textarea
                 rows={2}
+                placeholder="Rencana tindakan perbaikan atau instruksi pengendalian bahaya..."
                 {...register('correctiveAction')}
                 className="w-full text-xs rounded-xl border border-slate-200 py-2 px-3 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-red-500"
               />
@@ -482,7 +514,7 @@ export const EditFindingPage: React.FC = () => {
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Target Selesai (Due Date)
+                Target Selesai / Due Date (Opsional)
               </label>
               <input
                 type="date"
@@ -493,13 +525,47 @@ export const EditFindingPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Section 5: Evidence Upload */}
+        {/* Section 5: Evidence Documentation (Read-Only Display + Phase 5 Notice) */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
-          <EvidenceUploadField
-            evidences={evidences}
-            onChange={setEvidences}
-            maxFiles={3}
-          />
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 uppercase tracking-wide">
+              <FileText className="w-4 h-4 text-blue-600" />
+              <span>5. Dokumentasi Foto Bukti ({finding.evidences?.length || 0}/3)</span>
+            </div>
+            <span className="text-[10px] text-slate-400 font-medium">Cloud Storage (Phase 5)</span>
+          </div>
+
+          {finding.evidences && finding.evidences.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {finding.evidences.map((ev, idx) => (
+                <div
+                  key={ev.id || idx}
+                  className="bg-slate-50 border border-slate-200 rounded-xl overflow-hidden p-3 space-y-1.5"
+                >
+                  <div className="aspect-video bg-slate-100 rounded-lg flex items-center justify-center text-slate-400">
+                    <FileText className="w-6 h-6 text-slate-400" />
+                  </div>
+                  <p className="text-xs font-bold text-slate-800 truncate" title={ev.fileName}>
+                    {ev.fileName}
+                  </p>
+                  <p className="text-[10px] text-slate-500">
+                    {formatBytes(ev.fileSize || 0)} &bull; {ev.fileType || 'Image'}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="p-4 text-center text-xs text-slate-400 bg-slate-50 rounded-xl border border-slate-100">
+              Belum ada foto bukti yang terlampir pada laporan temuan ini.
+            </div>
+          )}
+
+          <div className="flex items-start gap-2 p-3 bg-blue-50/70 border border-blue-200/80 rounded-xl text-slate-600 text-xs leading-relaxed">
+            <Info className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
+            <span>
+              <strong>Integrasi Cloud Storage:</strong> Pengunggahan dan pembaruan foto bukti fisik ke cloud storage permanen (Vercel Blob Private) akan diimplementasikan pada <strong>Phase 5</strong>. Metadata bukti yang telah tersimpan tetap dipertahankan.
+            </span>
+          </div>
         </div>
 
         {/* Submit Actions */}
@@ -507,7 +573,7 @@ export const EditFindingPage: React.FC = () => {
           <button
             type="button"
             onClick={() => navigate(`/findings/${finding.id}`)}
-            className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition"
+            className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition cursor-pointer"
           >
             Batal
           </button>
@@ -524,3 +590,5 @@ export const EditFindingPage: React.FC = () => {
     </div>
   );
 };
+
+export default EditFindingPage;

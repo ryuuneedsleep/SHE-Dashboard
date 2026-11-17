@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { mockDashboardService } from '../services/mock/mockDashboardService.ts';
-import { mockFindingService } from '../services/mock/mockFindingService.ts';
+import { dashboardService } from '../services/dashboardService.ts';
 import type { DashboardData, DashboardFilters } from '../types/dashboard.ts';
 import { DashboardHeader } from '../components/dashboard/DashboardHeader.tsx';
 import { DashboardFiltersBar } from '../components/dashboard/DashboardFilters.tsx';
@@ -17,7 +16,7 @@ import {
   CheckCircle2,
   ShieldAlert,
   PlusCircle,
-  Info,
+  FileQuestion,
 } from 'lucide-react';
 
 export const DashboardPage: React.FC = () => {
@@ -38,7 +37,7 @@ export const DashboardPage: React.FC = () => {
   useEffect(() => {
     let active = true;
 
-    mockDashboardService
+    dashboardService
       .getDashboardData(filters)
       .then((result) => {
         if (!active) return;
@@ -69,7 +68,7 @@ export const DashboardPage: React.FC = () => {
     setIsRefreshing(true);
     setError(null);
     try {
-      const result = await mockDashboardService.getDashboardData(filters);
+      const result = await dashboardService.getDashboardData(filters);
       setData(result);
       setLastUpdated(
         new Date().toLocaleTimeString('id-ID', {
@@ -94,32 +93,13 @@ export const DashboardPage: React.FC = () => {
     });
   };
 
-  const handleResetDemoData = async () => {
-    mockFindingService.resetToDemoData();
-    await handleManualRefresh();
-  };
-
   return (
     <div className="space-y-6 pb-20">
-      {/* Demo Mode Notice */}
-      <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 rounded-xl p-3.5 flex items-start gap-3 shadow-xs">
-        <div className="p-1.5 rounded-lg bg-amber-500 text-white shrink-0">
-          <Info className="w-4 h-4" />
-        </div>
-        <div className="text-xs text-amber-900 leading-relaxed">
-          <p className="font-bold">Mode Prototipe (Phase 1 Frontend Only)</p>
-          <p className="text-amber-800/90 mt-0.5">
-            Semua metrik dan laporan dihitung secara real-time dari dataset demo K3 (12 laporan). Data tersimpan di memori browser dan belum terhubung ke database Neon PostgreSQL.
-          </p>
-        </div>
-      </div>
-
       {/* Header */}
       <DashboardHeader
         lastUpdated={lastUpdated || 'Menghubungkan...'}
         isRefreshing={isRefreshing}
         onRefresh={handleManualRefresh}
-        onResetDemoData={handleResetDemoData}
       />
 
       {/* Filters Bar */}
@@ -138,7 +118,7 @@ export const DashboardPage: React.FC = () => {
           </div>
           <button
             onClick={handleManualRefresh}
-            className="font-bold underline hover:text-rose-800"
+            className="font-bold underline hover:text-rose-800 cursor-pointer"
           >
             Coba lagi
           </button>
@@ -222,17 +202,31 @@ export const DashboardPage: React.FC = () => {
             </button>
           </div>
 
-          {/* Monthly Trend Chart */}
-          <FindingsTrendChart data={data.monthlyTrend} />
+          {data.kpis.totalFindings === 0 ? (
+            <div className="p-8 text-center bg-white rounded-2xl border border-slate-200 space-y-3">
+              <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-slate-400">
+                <FileQuestion className="w-6 h-6" />
+              </div>
+              <h3 className="text-sm font-bold text-slate-800">Belum Ada Temuan K3 Tercatat</h3>
+              <p className="text-xs text-slate-500 max-w-md mx-auto">
+                Database Neon belum memiliki temuan aktif untuk filter yang dipilih. Silakan buat temuan K3 baru untuk mulai mencatat insiden dan kondisi bahaya.
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Monthly Trend Chart */}
+              <FindingsTrendChart data={data.monthlyTrend} />
 
-          {/* Risk & Category Distribution Charts */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <RiskDistributionChart data={data.riskDistribution} />
-            <CategoryDistributionChart data={data.categoryDistribution} />
-          </div>
+              {/* Risk & Category Distribution Charts */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <RiskDistributionChart data={data.riskDistribution} />
+                <CategoryDistributionChart data={data.categoryDistribution} />
+              </div>
 
-          {/* Recent Findings (Top 5) */}
-          <RecentActivityFeed findings={data.recentFindings} />
+              {/* Recent Findings (Top 5) */}
+              <RecentActivityFeed findings={data.recentFindings} />
+            </>
+          )}
         </>
       ) : (
         <div className="p-12 text-center bg-white rounded-xl border border-slate-200">

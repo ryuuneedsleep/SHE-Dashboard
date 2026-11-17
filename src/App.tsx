@@ -5,7 +5,8 @@ import { BottomNavigationBar } from './components/navigation/BottomNavigationBar
 import { PageLoadingFallback } from './components/common/PageLoadingFallback.tsx';
 import { ProtectedRoute } from './components/auth/ProtectedRoute.tsx';
 import { LoginPage } from './pages/LoginPage.tsx';
-import { mockAuthService } from './services/mock/mockAuthService.ts';
+import { AuthProvider } from './context/AuthContext.tsx';
+import { useAuth } from './context/useAuth.ts';
 
 // Route-based code-splitting for modern PWA performance
 const DashboardPage = lazy(() =>
@@ -42,8 +43,13 @@ const AboutPage = lazy(() =>
  * Root redirect: navigates to /dashboard if logged in, or /login if not.
  */
 const RootRedirect: React.FC = () => {
-  const isAuth = mockAuthService.isAuthenticated();
-  return <Navigate to={isAuth ? '/dashboard' : '/login'} replace />;
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <PageLoadingFallback />;
+  }
+
+  return <Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />;
 };
 
 /**
@@ -65,35 +71,37 @@ const AuthenticatedLayout: React.FC = () => {
 
 export function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* Root Redirect */}
-        <Route path="/" element={<RootRedirect />} />
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* Root Redirect */}
+          <Route path="/" element={<RootRedirect />} />
 
-        {/* Public Login Route */}
-        <Route path="/login" element={<LoginPage />} />
+          {/* Public Login Route */}
+          <Route path="/login" element={<LoginPage />} />
 
-        {/* Protected App Routes */}
-        <Route
-          element={
-            <ProtectedRoute>
-              <AuthenticatedLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/findings" element={<FindingsManagementPage />} />
-          <Route path="/findings/new" element={<CreateFindingPage />} />
-          <Route path="/findings/:id" element={<FindingDetailPage />} />
-          <Route path="/findings/:id/edit" element={<EditFindingPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/about" element={<AboutPage />} />
-        </Route>
+          {/* Protected App Routes */}
+          <Route
+            element={
+              <ProtectedRoute>
+                <AuthenticatedLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/findings" element={<FindingsManagementPage />} />
+            <Route path="/findings/new" element={<CreateFindingPage />} />
+            <Route path="/findings/:id" element={<FindingDetailPage />} />
+            <Route path="/findings/:id/edit" element={<EditFindingPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/about" element={<AboutPage />} />
+          </Route>
 
-        {/* Catch-all Fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+          {/* Catch-all Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
 

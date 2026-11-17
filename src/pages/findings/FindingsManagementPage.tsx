@@ -1,19 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { mockFindingService } from '../../services/mock/mockFindingService.ts';
+import { findingService } from '../../services/findingService.ts';
 import type {
   FindingRecord,
   FindingFilters,
   FindingStatus,
   RiskLevel,
   FindingCategory,
+  HazardCategory,
   DepartmentOption,
 } from '../../types/finding.ts';
 import {
   DEPARTMENT_LIST,
   FINDING_CATEGORY_LIST,
+  HAZARD_CATEGORY_LIST,
   RISK_LEVEL_LIST,
   FINDING_STATUS_LIST,
+  OPERATIONAL_AREA_LIST,
 } from '../../types/finding.ts';
 import { StatusBadge } from '../../components/common/StatusBadge.tsx';
 import { RiskBadge } from '../../components/common/RiskBadge.tsx';
@@ -41,19 +44,65 @@ export const FindingsManagementPage: React.FC = () => {
   const [findings, setFindings] = useState<FindingRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
 
   // Filters State
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<FindingStatus | 'ALL'>('ALL');
   const [riskLevel, setRiskLevel] = useState<RiskLevel | 'ALL'>('ALL');
   const [findingCategory, setFindingCategory] = useState<FindingCategory | 'ALL'>('ALL');
+  const [hazardCategory, setHazardCategory] = useState<HazardCategory | 'ALL'>('ALL');
   const [department, setDepartment] = useState<DepartmentOption | 'ALL'>('ALL');
+  const [operationalArea, setOperationalArea] = useState<string | 'ALL'>('ALL');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
   // Archive modal state
   const [archiveTarget, setArchiveTarget] = useState<FindingRecord | null>(null);
   const [isArchiving, setIsArchiving] = useState(false);
+
+  const fetchFindings = useCallback(async () => {
+    try {
+      const filters: FindingFilters = {
+        search: search.trim() || undefined,
+        status: status !== 'ALL' ? status : undefined,
+        riskLevel: riskLevel !== 'ALL' ? riskLevel : undefined,
+        findingCategory: findingCategory !== 'ALL' ? findingCategory : undefined,
+        hazardCategory: hazardCategory !== 'ALL' ? hazardCategory : undefined,
+        department: department !== 'ALL' ? department : undefined,
+        operationalArea: operationalArea !== 'ALL' ? operationalArea : undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+      };
+
+      const result = await findingService.getFindings(filters, {
+        page: currentPage,
+        limit: ITEMS_PER_PAGE,
+      });
+
+      setFindings(result.items);
+      setTotalPages(result.pagination.totalPages);
+      setTotalCount(result.pagination.total);
+    } catch {
+      setFindings([]);
+      setTotalPages(1);
+      setTotalCount(0);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [
+    search,
+    status,
+    riskLevel,
+    findingCategory,
+    hazardCategory,
+    department,
+    operationalArea,
+    startDate,
+    endDate,
+    currentPage,
+  ]);
 
   useEffect(() => {
     let active = true;
@@ -63,41 +112,69 @@ export const FindingsManagementPage: React.FC = () => {
       status: status !== 'ALL' ? status : undefined,
       riskLevel: riskLevel !== 'ALL' ? riskLevel : undefined,
       findingCategory: findingCategory !== 'ALL' ? findingCategory : undefined,
+      hazardCategory: hazardCategory !== 'ALL' ? hazardCategory : undefined,
       department: department !== 'ALL' ? department : undefined,
+      operationalArea: operationalArea !== 'ALL' ? operationalArea : undefined,
       startDate: startDate || undefined,
       endDate: endDate || undefined,
     };
 
-    mockFindingService.getFindings(filters).then((result) => {
-      if (!active) return;
-      setFindings(result);
-      setIsLoading(false);
-      setCurrentPage(1);
-    });
+    findingService
+      .getFindings(filters, {
+        page: currentPage,
+        limit: ITEMS_PER_PAGE,
+      })
+      .then((result) => {
+        if (!active) return;
+        setFindings(result.items);
+        setTotalPages(result.pagination.totalPages);
+        setTotalCount(result.pagination.total);
+        setIsLoading(false);
+      })
+      .catch(() => {
+        if (!active) return;
+        setFindings([]);
+        setTotalPages(1);
+        setTotalCount(0);
+        setIsLoading(false);
+      });
 
     return () => {
       active = false;
     };
-  }, [search, status, riskLevel, findingCategory, department, startDate, endDate]);
+  }, [
+    search,
+    status,
+    riskLevel,
+    findingCategory,
+    hazardCategory,
+    department,
+    operationalArea,
+    startDate,
+    endDate,
+    currentPage,
+  ]);
 
   const handleResetFilters = () => {
     setSearch('');
     setStatus('ALL');
     setRiskLevel('ALL');
     setFindingCategory('ALL');
+    setHazardCategory('ALL');
     setDepartment('ALL');
+    setOperationalArea('ALL');
     setStartDate('');
     setEndDate('');
+    setCurrentPage(1);
   };
 
   const handleConfirmArchive = async () => {
     if (!archiveTarget) return;
     setIsArchiving(true);
     try {
-      await mockFindingService.archiveFinding(archiveTarget.id);
+      await findingService.archiveFinding(archiveTarget.id);
       setArchiveTarget(null);
-      const updated = await mockFindingService.getFindings();
-      setFindings(updated);
+      await fetchFindings();
     } catch {
       // ignore
     } finally {
@@ -105,12 +182,7 @@ export const FindingsManagementPage: React.FC = () => {
     }
   };
 
-  // Pagination calculations
-  const totalPages = Math.ceil(findings.length / ITEMS_PER_PAGE) || 1;
-  const paginatedFindings = findings.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  );
+  const paginatedFindings = findings;
 
   return (
     <div className="space-y-5 pb-20">
@@ -149,7 +221,7 @@ export const FindingsManagementPage: React.FC = () => {
         </div>
 
         {/* Filters Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2.5 pt-1">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 xl:grid-cols-8 gap-2.5 pt-1">
           {/* Status */}
           <div>
             <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
@@ -207,6 +279,25 @@ export const FindingsManagementPage: React.FC = () => {
             </select>
           </div>
 
+          {/* Hazard Category */}
+          <div>
+            <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
+              Kategori Bahaya
+            </label>
+            <select
+              value={hazardCategory}
+              onChange={(e) => setHazardCategory(e.target.value as HazardCategory | 'ALL')}
+              className="w-full text-xs rounded-lg border border-slate-200 py-1.5 px-2 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-red-500"
+            >
+              <option value="ALL">Semua Bahaya</option>
+              {HAZARD_CATEGORY_LIST.map((h) => (
+                <option key={h} value={h}>
+                  {h}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Department */}
           <div>
             <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
@@ -221,6 +312,25 @@ export const FindingsManagementPage: React.FC = () => {
               {DEPARTMENT_LIST.map((d) => (
                 <option key={d} value={d}>
                   {d}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Operational Area */}
+          <div>
+            <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
+              Area Operasional
+            </label>
+            <select
+              value={operationalArea}
+              onChange={(e) => setOperationalArea(e.target.value)}
+              className="w-full text-xs rounded-lg border border-slate-200 py-1.5 px-2 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-red-500"
+            >
+              <option value="ALL">Semua Area</option>
+              {OPERATIONAL_AREA_LIST.map((a) => (
+                <option key={a} value={a}>
+                  {a}
                 </option>
               ))}
             </select>
@@ -256,7 +366,7 @@ export const FindingsManagementPage: React.FC = () => {
         {/* Reset Filter Button */}
         <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-xs">
           <span className="text-slate-500 font-medium">
-            Ditemukan <strong className="text-slate-900">{findings.length}</strong> laporan
+            Ditemukan <strong className="text-slate-900">{totalCount}</strong> laporan
           </span>
           <button
             type="button"

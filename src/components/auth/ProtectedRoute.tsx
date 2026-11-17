@@ -1,6 +1,7 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { mockAuthService } from '../../services/mock/mockAuthService.ts';
+import { useAuth } from '../../context/useAuth.ts';
+import { PageLoadingFallback } from '../common/PageLoadingFallback.tsx';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -8,11 +9,17 @@ interface ProtectedRouteProps {
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const location = useLocation();
-  const isAuth = mockAuthService.isAuthenticated();
+  const { isAuthenticated, isLoading } = useAuth();
 
-  if (!isAuth) {
+  if (isLoading) {
+    return <PageLoadingFallback />;
+  }
+
+  if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   return <>{children}</>;
 };
+
+export default ProtectedRoute;

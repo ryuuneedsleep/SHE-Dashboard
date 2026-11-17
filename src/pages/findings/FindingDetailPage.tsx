@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { mockFindingService } from '../../services/mock/mockFindingService.ts';
-import type { FindingRecord } from '../../types/finding.ts';
+import { findingService } from '../../services/findingService.ts';
+import type { FindingRecord, FindingStatus } from '../../types/finding.ts';
 import { StatusBadge } from '../../components/common/StatusBadge.tsx';
 import { RiskBadge } from '../../components/common/RiskBadge.tsx';
 import {
@@ -18,7 +18,29 @@ import {
   User,
   Shield,
   Clock,
+  History,
+  ArrowRightCircle,
 } from 'lucide-react';
+
+function formatCategoryLabel(cat?: string): string {
+  if (!cat) return '-';
+  if (cat === 'UNSAFE_CONDITION' || cat === 'Unsafe Condition') return 'Unsafe Condition';
+  if (cat === 'UNSAFE_ACTION' || cat === 'Unsafe Action') return 'Unsafe Action';
+  if (cat === 'IMPROVEMENT_OPPORTUNITY' || cat === 'Improvement Opportunity') return 'Improvement Opportunity';
+  return cat.replace(/_/g, ' ');
+}
+
+function formatHazardLabel(haz?: string | null): string {
+  if (!haz) return '-';
+  const map: Record<string, string> = {
+    PHYSICAL: 'Physical',
+    CHEMICAL: 'Chemical',
+    BIOLOGICAL: 'Biological',
+    ERGONOMIC: 'Ergonomic',
+    ENVIRONMENTAL: 'Environmental',
+  };
+  return map[haz] || haz;
+}
 
 export const FindingDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -30,30 +52,70 @@ export const FindingDetailPage: React.FC = () => {
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
 
+  // Status transition state
+  const [targetStatus, setTargetStatus] = useState<FindingStatus | null>(null);
+  const [statusNote, setStatusNote] = useState('');
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [statusError, setStatusError] = useState<string | null>(null);
+
+  const fetchFinding = useCallback(async () => {
+    if (!id) return;
+    try {
+      const item = await findingService.getFindingById(id);
+      setFinding(item);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [id]);
+
   useEffect(() => {
     if (!id) return;
-    const fetchFinding = async () => {
-      setIsLoading(true);
-      try {
-        const item = await mockFindingService.getFindingById(id);
-        setFinding(item);
-      } finally {
-        setIsLoading(false);
-      }
+    let active = true;
+
+    findingService
+      .getFindingById(id)
+      .then((item) => {
+        if (active) setFinding(item);
+      })
+      .catch(() => {
+        if (active) setFinding(null);
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+
+    return () => {
+      active = false;
     };
-    fetchFinding();
   }, [id]);
 
   const handleConfirmArchive = async () => {
     if (!finding) return;
     setIsArchiving(true);
     try {
-      await mockFindingService.archiveFinding(finding.id);
+      await findingService.archiveFinding(finding.id);
       navigate('/findings');
     } catch {
       // ignore
     } finally {
       setIsArchiving(false);
+    }
+  };
+
+  const handleConfirmStatusTransition = async () => {
+    if (!finding || !targetStatus) return;
+    setIsUpdatingStatus(true);
+    setStatusError(null);
+
+    try {
+      await findingService.updateStatus(finding.id, targetStatus, statusNote.trim() || undefined);
+      setTargetStatus(null);
+      setStatusNote('');
+      await fetchFinding();
+    } catch (err) {
+      setStatusError(err instanceof Error ? err.message : 'Gagal mengubah status temuan.');
+    } finally {
+      setIsUpdatingStatus(false);
     }
   };
 
@@ -146,6 +208,53 @@ export const FindingDetailPage: React.FC = () => {
             {finding.description}
           </p>
         </div>
+
+        {/* Status Lifecycle Transition Action */}
+        <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50 p-3 rounded-xl">
+          <div className="text-xs">
+            <span className="font-bold text-slate-800 block">Status Alur K3:</span>
+            {finding.status === 'OPEN' && (
+              <span className="text-slate-500">Laporan baru dibuat dan belum ditangani.</span>
+            )}
+            {finding.status === 'IN_PROGRESS' && (
+              <span className="text-slate-500">Tindakan perbaikan sedang dalam proses penanganan.</span>
+            )}
+            {finding.status === 'CLOSED' && (
+              <span className="text-emerald-700 font-medium">Temuan telah ditutup dan tindakan perbaikan selesai diverifikasi.</span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            {finding.status === 'OPEN' && (
+              <button
+                type="button"
+                onClick={() => setTargetStatus('IN_PROGRESS')}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold transition shadow-xs cursor-pointer"
+              >
+                <ArrowRightCircle className="w-3.5 h-3.5" />
+                <span>Mulai Penanganan (IN_PROGRESS)</span>
+              </button>
+            )}
+
+            {finding.status === 'IN_PROGRESS' && (
+              <button
+                type="button"
+                onClick={() => setTargetStatus('CLOSED')}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition shadow-xs cursor-pointer"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>Selesaikan Temuan (CLOSED)</span>
+              </button>
+            )}
+
+            {finding.status === 'CLOSED' && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Status Terminal Selesai</span>
+              </span>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Grid: Finding Classification & Location */}
@@ -160,11 +269,11 @@ export const FindingDetailPage: React.FC = () => {
           <div className="space-y-2 text-xs">
             <div className="flex justify-between">
               <span className="text-slate-500">Kategori Temuan:</span>
-              <span className="font-semibold text-slate-800">{finding.findingCategory}</span>
+              <span className="font-semibold text-slate-800">{formatCategoryLabel(finding.findingCategory)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-500">Kategori Bahaya:</span>
-              <span className="font-semibold text-slate-800">{finding.hazardCategory || '-'}</span>
+              <span className="font-semibold text-slate-800">{formatHazardLabel(finding.hazardCategory)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-500">Tingkat Risiko:</span>
@@ -289,6 +398,113 @@ export const FindingDetailPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Chronological Status History Timeline */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-3">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 uppercase tracking-wide">
+            <History className="w-3.5 h-3.5 text-blue-600" />
+            <span>Riwayat Transisi Status ({finding.statusHistory?.length || 0})</span>
+          </div>
+          <span className="text-[10px] text-slate-400 font-medium">Urutan Kronologis</span>
+        </div>
+
+        {(!finding.statusHistory || finding.statusHistory.length === 0) ? (
+          <div className="p-4 text-center text-xs text-slate-400 bg-slate-50 rounded-xl">
+            Belum ada catatan riwayat status.
+          </div>
+        ) : (
+          <div className="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
+            {finding.statusHistory.map((item, idx) => (
+              <div key={item.id || idx} className="relative text-xs">
+                {/* Timeline node */}
+                <div className="absolute -left-6 top-0.5 w-4 h-4 rounded-full border-2 border-white bg-red-600 shadow-xs flex items-center justify-center" />
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-bold text-slate-800">
+                    {item.oldStatus ? `${item.oldStatus} ➔ ${item.newStatus}` : `Status Awal: ${item.newStatus}`}
+                  </span>
+                  <span className="text-[10px] text-slate-400">
+                    {new Date(item.createdAt).toLocaleString('id-ID')}
+                  </span>
+                </div>
+                <p className="text-slate-600 mt-0.5">
+                  {item.note || 'Tidak ada catatan tambahan.'}
+                </p>
+                <p className="text-[10px] text-slate-400 mt-0.5">
+                  Oleh: {item.changedByName || 'Administrator'}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Status Transition Modal */}
+      {targetStatus && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-xl border border-slate-200">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div className="flex items-center gap-2 text-slate-900 font-bold text-sm">
+                <ArrowRightCircle className="w-5 h-5 text-red-600" />
+                <span>Ubah Status Temuan</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setTargetStatus(null)}
+                className="text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <p className="text-slate-600 leading-relaxed">
+                Anda akan mengubah status laporan{' '}
+                <strong className="text-slate-900">{finding.referenceNo}</strong> dari{' '}
+                <strong className="text-slate-900">{finding.status}</strong> menjadi{' '}
+                <strong className="text-red-600">{targetStatus}</strong>.
+              </p>
+
+              {statusError && (
+                <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-lg text-rose-700 text-[11px]">
+                  {statusError}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">
+                  Catatan Transisi (Opsional):
+                </label>
+                <textarea
+                  value={statusNote}
+                  onChange={(e) => setStatusNote(e.target.value)}
+                  placeholder="Tambahkan catatan tindakan atau verifikasi perbaikan..."
+                  rows={3}
+                  className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setTargetStatus(null)}
+                className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmStatusTransition}
+                disabled={isUpdatingStatus}
+                className="px-3.5 py-1.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg transition disabled:opacity-50 cursor-pointer"
+              >
+                {isUpdatingStatus ? 'Memperbarui...' : 'Konfirmasi Ubah Status'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Image Zoom Modal */}
       {zoomedImage && (

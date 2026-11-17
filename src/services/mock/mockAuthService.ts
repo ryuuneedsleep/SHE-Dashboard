@@ -13,6 +13,7 @@ const SESSION_STORAGE_KEY = 'spld_safety_admin_session';
 export const DEMO_ADMIN_USER: AdminUser = {
   id: 'usr-admin-001',
   name: 'Administrator Demo',
+  fullName: 'Administrator Demo',
   email: 'admin@spld-safety.test',
   phone: '0812-3456-7890',
   position: 'Safety Administrator',
@@ -123,6 +124,7 @@ export class MockAuthService {
     const updatedUser: AdminUser = {
       ...session.user,
       name: input.name.trim(),
+      fullName: input.name.trim(),
       email: input.email.trim().toLowerCase(),
       phone: input.phone.trim(),
       position: input.position.trim(),

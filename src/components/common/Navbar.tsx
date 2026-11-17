@@ -1,31 +1,20 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BrandLogo } from './BrandLogo.tsx';
-import { mockAuthService } from '../../services/mock/mockAuthService.ts';
-import { LogOut, User, ShieldAlert } from 'lucide-react';
+import { useAuth } from '../../context/useAuth.ts';
+import { LogOut, User } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
   const navigate = useNavigate();
-  const currentUser = mockAuthService.getCurrentUser();
+  const { user, logout } = useAuth();
 
   const handleLogout = async () => {
-    await mockAuthService.logout();
+    await logout();
     navigate('/login');
   };
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
-      {/* Demo Mode Banner */}
-      <div className="bg-amber-500 text-white text-[11px] py-1 px-4 flex items-center justify-between font-medium">
-        <div className="max-w-7xl mx-auto w-full flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <ShieldAlert className="w-3.5 h-3.5" />
-            <span>DEMO MODE — Authentication belum terhubung ke backend.</span>
-          </div>
-          <span className="hidden sm:inline text-amber-100 text-[10px]">PWA Tugas Akhir Praktikum</span>
-        </div>
-      </div>
-
       {/* Main Navbar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-14">
@@ -46,7 +35,7 @@ export const Navbar: React.FC = () => {
           </div>
 
           {/* User profile / Logout */}
-          {currentUser && (
+          {user && (
             <div className="flex items-center gap-3">
               <button
                 type="button"
@@ -56,13 +45,15 @@ export const Navbar: React.FC = () => {
                 <div className="w-6 h-6 rounded-full bg-red-100 text-red-600 flex items-center justify-center font-bold text-xs">
                   <User className="w-3.5 h-3.5" />
                 </div>
-                <span className="hidden sm:inline font-medium">{currentUser.name}</span>
+                <span className="hidden sm:inline font-medium">
+                  {user.fullName || user.name || user.email}
+                </span>
               </button>
 
               <button
                 type="button"
                 onClick={handleLogout}
-                className="p-1.5 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+                className="p-1.5 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
                 title="Keluar (Logout)"
                 aria-label="Logout"
               >
@@ -75,3 +66,5 @@ export const Navbar: React.FC = () => {
     </header>
   );
 };
+
+export default Navbar;

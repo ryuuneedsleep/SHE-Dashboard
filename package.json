@@ -5,13 +5,27 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:api": "nodemon server/index.js",
+    "start:api": "node server/index.js",
+    "db:check": "node server/scripts/checkDatabase.js",
+    "db:seed:findings": "node server/scripts/seedDemoFindings.js",
+    "admin:create": "node server/scripts/createAdmin.js",
     "build": "tsc -b && vite build",
     "test": "node --experimental-strip-types test/test-verification.ts",
     "lint": "eslint .",
     "preview": "vite preview"
   },
+  "engines": {
+    "node": "26.x"
+  },
   "dependencies": {
     "@hookform/resolvers": "^7.0.3",
+    "@neondatabase/serverless": "^1.2.1",
+    "bcrypt": "^6.0.0",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^18.0.10",
+    "express": "^5.3.0",
+    "express-rate-limit": "^8.7.4",
     "lucide-react": "^1.70.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
@@ -22,6 +36,8 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@tailwindcss/vite": "^4.3.5",
+    "@types/bcrypt": "^6.0.0",
+    "@types/cookie-parser": "^1.4.10",
     "@types/node": "^24.19.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
@@ -30,6 +46,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.7",
     "globals": "^17.13.0",
+    "nodemon": "^3.1.14",
     "tailwindcss": "^4.3.5",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.72.1",

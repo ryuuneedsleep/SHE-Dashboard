@@ -15,7 +15,7 @@ import type {
   RiskDistributionData,
   CategoryDistributionData,
 } from '../../types/dashboard.ts';
-import type { FindingRecord, RiskLevel, FindingCategory } from '../../types/finding.ts';
+import type { FindingRecord } from '../../types/finding.ts';
 
 const MONTH_NAMES = [
   'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
@@ -116,15 +116,19 @@ export class MockDashboardService {
 
   private calculateRiskDistribution(findings: FindingRecord[]): RiskDistributionData[] {
     const total = findings.length;
-    const levels: RiskLevel[] = ['Low', 'Medium', 'High', 'Critical'];
-    const colorMap: Record<RiskLevel, string> = {
+    const levels: ('Low' | 'Medium' | 'High' | 'Critical')[] = ['Low', 'Medium', 'High', 'Critical'];
+    const colorMap: Record<string, string> = {
       Low: '#10B981',      // Emerald
+      LOW: '#10B981',
       Medium: '#F59E0B',   // Amber
+      MEDIUM: '#F59E0B',
       High: '#F97316',     // Orange
+      HIGH: '#F97316',
       Critical: '#EF4444', // Red
+      CRITICAL: '#EF4444',
     };
 
-    const counts: Record<RiskLevel, number> = {
+    const counts: Record<string, number> = {
       Low: 0,
       Medium: 0,
       High: 0,
@@ -132,49 +136,70 @@ export class MockDashboardService {
     };
 
     for (const f of findings) {
-      if (counts[f.riskLevel] !== undefined) {
-        counts[f.riskLevel]++;
+      const norm =
+        f.riskLevel === 'LOW'
+          ? 'Low'
+          : f.riskLevel === 'MEDIUM'
+          ? 'Medium'
+          : f.riskLevel === 'HIGH'
+          ? 'High'
+          : f.riskLevel === 'CRITICAL'
+          ? 'Critical'
+          : f.riskLevel;
+      if (counts[norm] !== undefined) {
+        counts[norm]++;
       }
     }
 
     return levels.map((lvl) => ({
       level: lvl,
-      count: counts[lvl],
-      percentage: total > 0 ? Math.round((counts[lvl] / total) * 100) : 0,
-      color: colorMap[lvl],
+      count: counts[lvl] || 0,
+      percentage: total > 0 ? Math.round(((counts[lvl] || 0) / total) * 100) : 0,
+      color: colorMap[lvl] || '#6B7280',
     }));
   }
 
   private calculateCategoryDistribution(findings: FindingRecord[]): CategoryDistributionData[] {
     const total = findings.length;
-    const categories: FindingCategory[] = [
+    const categories: ('Unsafe Condition' | 'Unsafe Action' | 'Improvement Opportunity')[] = [
       'Unsafe Condition',
       'Unsafe Action',
       'Improvement Opportunity',
     ];
-    const colorMap: Record<FindingCategory, string> = {
+    const colorMap: Record<string, string> = {
       'Unsafe Condition': '#EF4444',
+      UNSAFE_CONDITION: '#EF4444',
       'Unsafe Action': '#3B82F6',
+      UNSAFE_ACTION: '#3B82F6',
       'Improvement Opportunity': '#10B981',
+      IMPROVEMENT_OPPORTUNITY: '#10B981',
     };
 
-    const counts: Record<FindingCategory, number> = {
+    const counts: Record<string, number> = {
       'Unsafe Condition': 0,
       'Unsafe Action': 0,
       'Improvement Opportunity': 0,
     };
 
     for (const f of findings) {
-      if (counts[f.findingCategory] !== undefined) {
-        counts[f.findingCategory]++;
+      const norm =
+        f.findingCategory === 'UNSAFE_CONDITION'
+          ? 'Unsafe Condition'
+          : f.findingCategory === 'UNSAFE_ACTION'
+          ? 'Unsafe Action'
+          : f.findingCategory === 'IMPROVEMENT_OPPORTUNITY'
+          ? 'Improvement Opportunity'
+          : f.findingCategory;
+      if (counts[norm] !== undefined) {
+        counts[norm]++;
       }
     }
 
     return categories.map((cat) => ({
       category: cat,
-      count: counts[cat],
-      percentage: total > 0 ? Math.round((counts[cat] / total) * 100) : 0,
-      color: colorMap[cat],
+      count: counts[cat] || 0,
+      percentage: total > 0 ? Math.round(((counts[cat] || 0) / total) * 100) : 0,
+      color: colorMap[cat] || '#6B7280',
     }));
   }
 }
