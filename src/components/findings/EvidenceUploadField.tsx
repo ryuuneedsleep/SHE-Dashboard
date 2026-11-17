@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { FindingEvidence } from '../../types/finding.ts';
-import { Camera, Trash2, RefreshCw, AlertCircle, ShieldCheck } from 'lucide-react';
+import { Camera, Trash2, RefreshCw, AlertCircle } from 'lucide-react';
 
 interface EvidenceUploadFieldProps {
   evidences: FindingEvidence[];
@@ -227,14 +227,6 @@ export const EvidenceUploadField: React.FC<EvidenceUploadFieldProps> = ({
           </span>
         </button>
       )}
-
-      {/* Private Storage Security Notice */}
-      <div className="flex items-start gap-2 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-600 text-[11px] leading-relaxed">
-        <ShieldCheck className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
-        <span>
-          <strong>Penyimpanan Privat Aman:</strong> Foto bukti temuan K3 disimpan secara terenkripsi dan privat. Hanya Administrator terautentikasi yang dapat mengakses dan melihat bukti foto ini.
-        </span>
-      </div>
     </div>
   );
 };

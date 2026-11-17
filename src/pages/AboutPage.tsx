@@ -23,7 +23,7 @@ export const AboutPage: React.FC = () => {
           </div>
           <div>
             <h1 className="text-xl sm:text-2xl font-black tracking-tight leading-tight">
-              SPLD SAFETY PWA
+              SPLD SAFETY
             </h1>
             <p className="text-xs text-red-100 font-medium">
               Service Parts Logistic Division • Safety Management System
@@ -36,10 +36,6 @@ export const AboutPage: React.FC = () => {
           Dirancang untuk mempercepat alur pelaporan temuan unsafe condition, unsafe action, serta peluang
           perbaikan lingkungan kerja secara terstruktur dan real-time.
         </p>
-
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 text-xs font-semibold backdrop-blur-xs">
-          <span>Versi Aplikasi: v2.0.0 (Release Candidate)</span>
-        </div>
       </div>
 
       {/* Academic / Project Context Banner */}
