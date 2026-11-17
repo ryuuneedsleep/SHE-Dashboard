@@ -5,11 +5,13 @@
 
 import type {
   FindingRecord,
+  FindingEvidence,
   CreateFindingInput,
   UpdateFindingInput,
   FindingFilters,
   FindingStatus,
 } from '../types/finding.ts';
+import { uploadPresigned } from '@vercel/blob/client';
 
 export interface PaginatedFindingsResponse {
   items: FindingRecord[];
@@ -201,6 +203,72 @@ export const findingService = {
     const payload = await res.json();
     if (!res.ok || !payload.success) {
       throw new Error(payload.message || 'Gagal mengarsipkan temuan K3.');
+    }
+
+    return true;
+  },
+
+  /**
+   * Upload single evidence photo directly to Vercel Blob Private and confirm metadata in Neon
+   */
+  async uploadEvidence(
+    findingId: string,
+    file: File,
+    onProgress?: (percentage: number) => void
+  ): Promise<FindingEvidence> {
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const randomSuffix = Math.random().toString(36).substring(2, 9);
+    const pathname = `findings/${findingId}/${Date.now()}-${randomSuffix}-${safeName}`;
+
+    // 1. Direct client upload to Vercel Blob Private Storage via presigned control plane
+    const blobResult = await uploadPresigned(pathname, file, {
+      access: 'private',
+      handleUploadUrl: `/api/v1/findings/${findingId}/evidence/upload-presign`,
+      clientPayload: JSON.stringify({ findingId, fileName: file.name }),
+      onUploadProgress: (progress) => {
+        if (onProgress && progress.percentage !== undefined) {
+          onProgress(Math.round(progress.percentage));
+        }
+      },
+    });
+
+    // 2. Finalize metadata in Neon PostgreSQL database
+    const confirmRes = await fetch(`/api/v1/findings/${findingId}/evidence/confirm`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        pathname: blobResult.pathname,
+        fileName: file.name,
+        fileSize: file.size,
+        mimeType: file.type,
+      }),
+    });
+
+    const payload = await confirmRes.json();
+    if (!confirmRes.ok || !payload.success) {
+      throw new Error(payload.message || 'Gagal mengonfirmasi metadata bukti foto.');
+    }
+
+    return payload.data;
+  },
+
+  /**
+   * Delete evidence photo from storage and database
+   */
+  async deleteEvidence(findingId: string, evidenceId: string): Promise<boolean> {
+    const res = await fetch(`/api/v1/findings/${findingId}/evidence/${evidenceId}`, {
+      method: 'DELETE',
+      headers: { Accept: 'application/json' },
+      credentials: 'include',
+    });
+
+    const payload = await res.json();
+    if (!res.ok || !payload.success) {
+      throw new Error(payload.message || 'Gagal menghapus bukti foto.');
     }
 
     return true;

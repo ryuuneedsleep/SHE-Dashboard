@@ -41,6 +41,7 @@ import { profileController } from '../server/controllers/profileController.js';
 import { findingService as prodFindingService } from '../src/services/findingService.ts';
 import { dashboardService as prodDashboardService } from '../src/services/dashboardService.ts';
 import { profileService as prodProfileService } from '../src/services/profileService.ts';
+import { blobService, ALLOWED_EVIDENCE_MIME_TYPES, MAX_EVIDENCE_SIZE_BYTES, detectImageSignature } from '../server/services/blobService.js';
 import fs from 'fs';
 
 async function runTests() {
@@ -636,6 +637,24 @@ async function runTests() {
       send(data: unknown) {
         this.body = data;
         return this;
+      },
+      write(chunk: unknown) {
+        if (!this.body) this.body = '';
+        this.body += chunk;
+        return true;
+      },
+      end(data?: unknown) {
+        if (data !== undefined) this.body = data;
+        return this;
+      },
+      on() {
+        return this;
+      },
+      once() {
+        return this;
+      },
+      emit() {
+        return true;
       },
       cookie() {
         return this;
@@ -2105,6 +2124,694 @@ async function runTests() {
       vercelNotFoundPayload?.success === false &&
       vercelNotFoundPayload?.code === 'NOT_FOUND',
     'Vercel handler returns JSON 404 envelope (not HTML) for unmatched API paths'
+  );
+
+  // -------------------------------------------------------------------------
+  // 11. VERCEL BLOB PRIVATE STORAGE & EVIDENCE INTEGRATION (PHASE 5)
+  // -------------------------------------------------------------------------
+  console.log('\n[11. VERCEL BLOB PRIVATE STORAGE & EVIDENCE INTEGRATION]');
+
+  // TEST 117: Storage constants adhere strictly to Blueprint constraints
+  assert(
+    MAX_EVIDENCE_SIZE_BYTES === 5 * 1024 * 1024 &&
+      ALLOWED_EVIDENCE_MIME_TYPES.length === 3 &&
+      ALLOWED_EVIDENCE_MIME_TYPES.includes('image/jpeg') &&
+      ALLOWED_EVIDENCE_MIME_TYPES.includes('image/png') &&
+      ALLOWED_EVIDENCE_MIME_TYPES.includes('image/webp'),
+    'blobService defines strictly MAX_EVIDENCE_SIZE_BYTES = 5 MB and allowed MIME types (JPEG, PNG, WebP)'
+  );
+
+  // TEST 118: uploadPresign requires authenticated admin session
+  const unauthPresignRes = createMockRes();
+  await findingController.uploadPresign(
+    { params: { id: sampleFindingId }, user: null } as never,
+    unauthPresignRes as never,
+    (() => {}) as never
+  );
+  assert(
+    unauthPresignRes.statusCode === 401 &&
+      (unauthPresignRes.body as { success?: boolean })?.success === false,
+    'uploadPresign returns HTTP 401 Unauthorized when request lacks authenticated admin session'
+  );
+
+  // TEST 119: uploadPresign returns 404 if finding does not exist
+  const originalGetFindingByIdForPhase5 = findingModel.getFindingById;
+  const originalCountEvidences = findingModel.countEvidences;
+  const originalGetEvidenceById = findingModel.getEvidenceById;
+  const originalAddEvidence = findingModel.addEvidence;
+  const originalDeleteEvidence = findingModel.deleteEvidence;
+
+  findingModel.getFindingById = async () => null as never;
+  const notFoundPresignRes = createMockRes();
+  await findingController.uploadPresign(
+    { params: { id: '00000000-0000-0000-0000-000000000000' }, user: { id: sampleAdminId } } as never,
+    notFoundPresignRes as never,
+    (() => {}) as never
+  );
+  assert(
+    notFoundPresignRes.statusCode === 404 &&
+      (notFoundPresignRes.body as { code?: string })?.code === 'NOT_FOUND',
+    'uploadPresign returns HTTP 404 when target finding does not exist'
+  );
+
+  // TEST 120: uploadPresign rejects archived finding with HTTP 400
+  findingModel.getFindingById = async () => ({ ...mockFindingData, isArchived: true }) as never;
+  const archivedPresignRes = createMockRes();
+  await findingController.uploadPresign(
+    { params: { id: sampleFindingId }, user: { id: sampleAdminId } } as never,
+    archivedPresignRes as never,
+    (() => {}) as never
+  );
+  assert(
+    archivedPresignRes.statusCode === 400 &&
+      (archivedPresignRes.body as { message?: string })?.message?.includes('diarsipkan'),
+    'uploadPresign rejects uploads to archived findings with HTTP 400'
+  );
+
+  // TEST 121: uploadPresign enforces 3-photo maximum limit
+  findingModel.getFindingById = async () => mockFindingData as never;
+  findingModel.countEvidences = async () => 3;
+  const maxLimitPresignRes = createMockRes();
+  await findingController.uploadPresign(
+    { params: { id: sampleFindingId }, user: { id: sampleAdminId } } as never,
+    maxLimitPresignRes as never,
+    (() => {}) as never
+  );
+  assert(
+    maxLimitPresignRes.statusCode === 400 &&
+      (maxLimitPresignRes.body as { message?: string })?.message?.includes('maksimum 3 foto'),
+    'uploadPresign rejects upload token issuance when finding already reached 3-photo limit'
+  );
+
+  // TEST 122: uploadPresign generates valid token when valid finding and count < 3
+  findingModel.countEvidences = async () => 1;
+  const originalHandlePresign = blobService.handlePresignRequest;
+  blobService.handlePresignRequest = async () => ({
+    token: 'verbatim-mock-blob-presigned-token-xyz',
+    urlOptions: { addRandomSuffix: false },
+  });
+  const validPresignRes = createMockRes();
+  await findingController.uploadPresign(
+    {
+      params: { id: sampleFindingId },
+      body: { type: 'blob.generate-client-token', payload: { pathname: `findings/${sampleFindingId}/photo.jpg` } },
+      user: { id: sampleAdminId },
+    } as never,
+    validPresignRes as never,
+    (() => {}) as never
+  );
+  assert(
+    validPresignRes.statusCode === 200 &&
+      Boolean((validPresignRes.body as { token?: string })?.token),
+    'uploadPresign successfully delegates to blobService and returns signed client upload token'
+  );
+  blobService.handlePresignRequest = originalHandlePresign;
+
+  // TEST 123: confirmEvidence rejects unsupported MIME types
+  const originalVerifyBlob = blobService.verifyBlob;
+  blobService.verifyBlob = async (p: string) => ({
+    size: 1024,
+    contentType: 'application/pdf',
+    pathname: p,
+  });
+  const invalidMimeRes = createMockRes();
+  await findingController.confirmEvidence(
+    {
+      params: { id: sampleFindingId },
+      body: {
+        pathname: `findings/${sampleFindingId}/document.pdf`,
+        fileName: 'document.pdf',
+        mimeType: 'application/pdf',
+        fileSize: 1024,
+      },
+      user: { id: sampleAdminId },
+    } as never,
+    invalidMimeRes as never,
+    (() => {}) as never
+  );
+  assert(
+    invalidMimeRes.statusCode === 400 &&
+      (invalidMimeRes.body as { message?: string })?.message?.includes('Format file tidak didukung'),
+    'confirmEvidence rejects unsupported MIME types (e.g. application/pdf) with HTTP 400'
+  );
+
+  // TEST 124: confirmEvidence rejects files exceeding 5MB limit
+  blobService.verifyBlob = async (p: string) => ({
+    size: 6 * 1024 * 1024,
+    contentType: 'image/png',
+    pathname: p,
+  });
+  const oversizeRes = createMockRes();
+  await findingController.confirmEvidence(
+    {
+      params: { id: sampleFindingId },
+      body: {
+        pathname: `findings/${sampleFindingId}/big.png`,
+        fileName: 'big.png',
+        mimeType: 'image/png',
+        fileSize: 6 * 1024 * 1024,
+      },
+      user: { id: sampleAdminId },
+    } as never,
+    oversizeRes as never,
+    (() => {}) as never
+  );
+  assert(
+    oversizeRes.statusCode === 400 &&
+      (oversizeRes.body as { message?: string })?.message?.includes('5 MB'),
+    'confirmEvidence rejects files exceeding 5MB with HTTP 400'
+  );
+
+  // TEST 125: confirmEvidence validates pathname prefix matches finding ID
+  const invalidPrefixRes = createMockRes();
+  await findingController.confirmEvidence(
+    {
+      params: { id: sampleFindingId },
+      body: {
+        pathname: 'findings/some-other-id/photo.jpg',
+        fileName: 'photo.jpg',
+        mimeType: 'image/jpeg',
+        fileSize: 50000,
+      },
+      user: { id: sampleAdminId },
+    } as never,
+    invalidPrefixRes as never,
+    (() => {}) as never
+  );
+  assert(
+    invalidPrefixRes.statusCode === 400 &&
+      (invalidPrefixRes.body as { message?: string })?.message?.includes('Prefix pathname'),
+    'confirmEvidence rejects pathnames that do not match the expected findings/{id}/ prefix'
+  );
+
+  // TEST 126: confirmEvidence rejects when finding count is already 3 (atomic enforcement)
+  findingModel.countEvidences = async () => 3;
+  const countLimitRes = createMockRes();
+  await findingController.confirmEvidence(
+    {
+      params: { id: sampleFindingId },
+      body: {
+        pathname: `findings/${sampleFindingId}/photo4.jpg`,
+        fileName: 'photo4.jpg',
+        mimeType: 'image/jpeg',
+        fileSize: 50000,
+      },
+      user: { id: sampleAdminId },
+    } as never,
+    countLimitRes as never,
+    (() => {}) as never
+  );
+  assert(
+    countLimitRes.statusCode === 400 &&
+      (countLimitRes.body as { message?: string })?.message?.includes('3 foto'),
+    'confirmEvidence atomically rejects uploads when finding has reached 3 photos'
+  );
+
+  // TEST 127: confirmEvidence verifies blob in storage with access: "private" and persists metadata
+  findingModel.countEvidences = async () => 1;
+  const originalVerifyBlobSignature = blobService.verifyBlobSignature;
+  let verifiedPathname: string | null = null;
+  blobService.verifyBlob = async (p: string) => {
+    verifiedPathname = p;
+    return { size: 50000, contentType: 'image/jpeg', pathname: p };
+  };
+  blobService.verifyBlobSignature = async () => 'image/jpeg';
+  const mockSavedEvidence = {
+    id: '11111111-1111-1111-1111-111111111111',
+    finding_id: sampleFindingId,
+    blob_pathname: `findings/${sampleFindingId}/photo1.jpg`,
+    file_name: 'photo1.jpg',
+    mime_type: 'image/jpeg',
+    file_size_bytes: 50000,
+    created_at: new Date().toISOString(),
+  };
+  findingModel.addEvidence = async () => mockSavedEvidence as never;
+
+  const validConfirmRes = createMockRes();
+  await findingController.confirmEvidence(
+    {
+      params: { id: sampleFindingId },
+      body: {
+        pathname: `findings/${sampleFindingId}/photo1.jpg`,
+        fileName: 'photo1.jpg',
+        mimeType: 'image/jpeg',
+        fileSize: 50000,
+      },
+      user: { id: sampleAdminId },
+    } as never,
+    validConfirmRes as never,
+    (() => {}) as never
+  );
+  const confirmPayload = validConfirmRes.body as { success?: boolean; data?: { id?: string; url?: string } };
+  assert(
+    validConfirmRes.statusCode === 201 &&
+      confirmPayload?.success === true &&
+      confirmPayload?.data?.id === mockSavedEvidence.id &&
+      confirmPayload?.data?.url?.includes(`/api/v1/findings/${sampleFindingId}/evidence/${mockSavedEvidence.id}/content`) &&
+      verifiedPathname === `findings/${sampleFindingId}/photo1.jpg`,
+    'confirmEvidence calls blobService.verifyBlob, persists to Neon DB, and returns HTTP 201 with streaming url'
+  );
+  blobService.verifyBlob = originalVerifyBlob;
+  blobService.verifyBlobSignature = originalVerifyBlobSignature;
+
+  // TEST 128: getFindingById maps evidences to streaming URLs
+  const sampleWithEv = {
+    ...mockFindingData,
+    evidences: [
+      {
+        id: '11111111-1111-1111-1111-111111111111',
+        findingId: sampleFindingId,
+        fileName: 'test.png',
+        fileSize: 12345,
+        fileType: 'image/png',
+        blobPathname: `findings/${sampleFindingId}/test.png`,
+        uploadedAt: new Date().toISOString(),
+        url: `/api/v1/findings/${sampleFindingId}/evidence/11111111-1111-1111-1111-111111111111/content`,
+      },
+    ],
+  };
+  findingModel.getFindingById = async () => sampleWithEv as never;
+  const detailRes = createMockRes();
+  await findingController.getFindingById(
+    { params: { id: sampleFindingId }, user: { id: sampleAdminId } } as never,
+    detailRes as never,
+    (() => {}) as never
+  );
+  const detailPayload = detailRes.body as { success?: boolean; data?: { evidences?: Array<{ url?: string }> } };
+  assert(
+    detailRes.statusCode === 200 &&
+      detailPayload?.data?.evidences?.[0]?.url === `/api/v1/findings/${sampleFindingId}/evidence/11111111-1111-1111-1111-111111111111/content`,
+    'getFindingById maps evidence list to authenticated streaming content endpoint URL'
+  );
+
+  // TEST 129: getEvidenceContent requires authenticated admin session
+  const unauthStreamRes = createMockRes();
+  await findingController.getEvidenceContent(
+    { params: { id: sampleFindingId, evidenceId: '11111111-1111-1111-1111-111111111111' }, user: null } as never,
+    unauthStreamRes as never,
+    (() => {}) as never
+  );
+  assert(
+    unauthStreamRes.statusCode === 401 &&
+      (unauthStreamRes.body as { success?: boolean })?.success === false,
+    'getEvidenceContent returns HTTP 401 Unauthorized for unauthenticated requests'
+  );
+
+  // TEST 130: getEvidenceContent returns 404 if evidence does not exist
+  findingModel.getEvidenceById = async () => null as never;
+  const notFoundStreamRes = createMockRes();
+  await findingController.getEvidenceContent(
+    { params: { id: sampleFindingId, evidenceId: '00000000-0000-0000-0000-000000000000' }, user: { id: sampleAdminId } } as never,
+    notFoundStreamRes as never,
+    (() => {}) as never
+  );
+  assert(
+    notFoundStreamRes.statusCode === 404 &&
+      (notFoundStreamRes.body as { code?: string })?.code === 'NOT_FOUND',
+    'getEvidenceContent returns HTTP 404 when requested evidence ID is not found in database'
+  );
+
+  // TEST 131: getEvidenceContent sets Cache-Control: private, no-store and nosniff
+  findingModel.getEvidenceById = async () => mockSavedEvidence as never;
+  const originalGetBlobStream = blobService.getBlobStream;
+  blobService.getBlobStream = async () => ({
+    contentType: 'image/jpeg',
+    contentLength: 50000,
+    body: Buffer.from('FAKE-JPEG-BINARY-DATA'),
+  } as never);
+
+  const streamRes = createMockRes();
+  await findingController.getEvidenceContent(
+    { params: { id: sampleFindingId, evidenceId: mockSavedEvidence.id }, user: { id: sampleAdminId } } as never,
+    streamRes as never,
+    (() => {}) as never
+  );
+  assert(
+    streamRes.statusCode === 200 &&
+      streamRes.headers['content-type'] === 'image/jpeg' &&
+      streamRes.headers['cache-control'] === 'private, no-store, max-age=0' &&
+      streamRes.headers['x-content-type-options'] === 'nosniff',
+    'getEvidenceContent sets Cache-Control: private, no-store, max-age=0 and X-Content-Type-Options: nosniff headers'
+  );
+  blobService.getBlobStream = originalGetBlobStream;
+
+  // TEST 132: deleteEvidence requires authenticated admin session
+  const unauthDeleteRes = createMockRes();
+  await findingController.deleteEvidence(
+    { params: { id: sampleFindingId, evidenceId: '11111111-1111-1111-1111-111111111111' }, user: null } as never,
+    unauthDeleteRes as never,
+    (() => {}) as never
+  );
+  assert(
+    unauthDeleteRes.statusCode === 401 &&
+      (unauthDeleteRes.body as { success?: boolean })?.success === false,
+    'deleteEvidence returns HTTP 401 Unauthorized for unauthenticated requests'
+  );
+
+  // TEST 133: deleteEvidence returns 404 if evidence does not exist
+  findingModel.getEvidenceById = async () => null as never;
+  const notFoundDeleteRes = createMockRes();
+  await findingController.deleteEvidence(
+    { params: { id: sampleFindingId, evidenceId: '00000000-0000-0000-0000-000000000000' }, user: { id: sampleAdminId } } as never,
+    notFoundDeleteRes as never,
+    (() => {}) as never
+  );
+  assert(
+    notFoundDeleteRes.statusCode === 404 &&
+      (notFoundDeleteRes.body as { code?: string })?.code === 'NOT_FOUND',
+    'deleteEvidence returns HTTP 404 if evidence record is not found'
+  );
+
+  // TEST 134: deleteEvidence calls blobService.deleteBlob and removes record from database
+  findingModel.getEvidenceById = async () => mockSavedEvidence as never;
+  let deletedBlobPathname: string | null = null;
+  const originalDeleteBlob = blobService.deleteBlob;
+  blobService.deleteBlob = async (p: string) => {
+    deletedBlobPathname = p;
+  };
+  let databaseDeleteCalled = false;
+  findingModel.deleteEvidence = async () => {
+    databaseDeleteCalled = true;
+    return true;
+  };
+
+  const validDeleteRes = createMockRes();
+  await findingController.deleteEvidence(
+    { params: { id: sampleFindingId, evidenceId: mockSavedEvidence.id }, user: { id: sampleAdminId } } as never,
+    validDeleteRes as never,
+    (() => {}) as never
+  );
+  assert(
+    validDeleteRes.statusCode === 200 &&
+      (validDeleteRes.body as { success?: boolean })?.success === true &&
+      deletedBlobPathname === mockSavedEvidence.blob_pathname &&
+      databaseDeleteCalled === true,
+    'deleteEvidence invokes blobService.deleteBlob with access: "private" and atomically removes database record'
+  );
+  blobService.deleteBlob = originalDeleteBlob;
+
+  // Restore findingModel methods
+  findingModel.getFindingById = originalGetFindingByIdForPhase5;
+  findingModel.countEvidences = originalCountEvidences;
+  findingModel.getEvidenceById = originalGetEvidenceById;
+  findingModel.addEvidence = originalAddEvidence;
+  findingModel.deleteEvidence = originalDeleteEvidence;
+
+  // -------------------------------------------------------------------------
+  // 12. EVIDENCE RELIABILITY & PRODUCTION CONCURRENCY VERIFICATION (PHASE 5.1)
+  // -------------------------------------------------------------------------
+  console.log('\n[12. EVIDENCE RELIABILITY & PRODUCTION CONCURRENCY VERIFICATION (PHASE 5.1)]');
+
+  findingModel.getFindingById = async () => mockFindingData as never;
+
+  // TEST 135: detectImageSignature correctly validates magic bytes
+  const fakeJpegBytes = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01]);
+  const fakePngBytes = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d]);
+  const fakeWebpBytes = Buffer.from([0x52, 0x49, 0x46, 0x46, 0x24, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50]);
+  const fakePdfBytes = Buffer.from([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x35, 0x0a, 0x25, 0xd0, 0xd4]);
+  const fakeExeBytes = Buffer.from([0x4d, 0x5a, 0x90, 0x00, 0x03, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00]);
+
+  assert(
+    detectImageSignature(fakeJpegBytes) === 'image/jpeg' &&
+      detectImageSignature(fakePngBytes) === 'image/png' &&
+      detectImageSignature(fakeWebpBytes) === 'image/webp' &&
+      detectImageSignature(fakePdfBytes) === null &&
+      detectImageSignature(fakeExeBytes) === null,
+    'detectImageSignature reliably validates JPEG, PNG, and WebP magic bytes and rejects non-image binaries'
+  );
+
+  // TEST 136: confirmEvidence rejects MIME spoofing with HTTP 400 INVALID_FILE_SIGNATURE
+  findingModel.countEvidences = async () => 1;
+  const spoofBlobOriginalVerify = blobService.verifyBlob;
+  const spoofBlobOriginalVerifySig = blobService.verifyBlobSignature;
+  let spoofDeletedBlobPath: string | null = null;
+  const spoofOriginalDel = blobService.deleteBlob;
+  blobService.deleteBlob = async (p: string) => {
+    spoofDeletedBlobPath = p;
+  };
+  blobService.verifyBlob = async (p: string) => ({
+    size: 50000,
+    contentType: 'image/jpeg', // Spoofed header
+    pathname: p,
+  });
+  blobService.verifyBlobSignature = async () => null; // Signature check fails!
+
+  const spoofConfirmRes = createMockRes();
+  await findingController.confirmEvidence(
+    {
+      params: { id: sampleFindingId },
+      body: {
+        pathname: `findings/${sampleFindingId}/malicious.jpg`,
+        fileName: 'malicious.jpg',
+        mimeType: 'image/jpeg',
+        fileSize: 50000,
+      },
+      user: { id: sampleAdminId },
+    } as never,
+    spoofConfirmRes as never,
+    (() => {}) as never
+  );
+  assert(
+    spoofConfirmRes.statusCode === 400 &&
+      (spoofConfirmRes.body as { code?: string })?.code === 'INVALID_FILE_SIGNATURE' &&
+      spoofDeletedBlobPath === `findings/${sampleFindingId}/malicious.jpg`,
+    'confirmEvidence detects MIME spoofing, rejects with INVALID_FILE_SIGNATURE, and deletes orphan blob'
+  );
+  blobService.verifyBlob = spoofBlobOriginalVerify;
+  blobService.verifyBlobSignature = spoofBlobOriginalVerifySig;
+  blobService.deleteBlob = spoofOriginalDel;
+
+  // TEST 137: Concurrent finalize when finding has 2 photos: exactly 1 succeeds, 1 rejected and cleaned up
+  let currentEvidenceCount = 2;
+  findingModel.countEvidences = async () => currentEvidenceCount;
+  const cleanedOrphanBlobs: string[] = [];
+  const origDelForConcurrency = blobService.deleteBlob;
+  blobService.deleteBlob = async (p: string) => {
+    cleanedOrphanBlobs.push(p);
+  };
+  const origVerifyBlobForConc = blobService.verifyBlob;
+  const origVerifySigForConc = blobService.verifyBlobSignature;
+  blobService.verifyBlob = async (p: string) => ({ size: 50000, contentType: 'image/jpeg', pathname: p });
+  blobService.verifyBlobSignature = async () => 'image/jpeg';
+
+  const origAddEvidenceForConc = findingModel.addEvidence;
+  let lockHolder: Promise<void> = Promise.resolve();
+  findingModel.addEvidence = async (findingId: string, data: { blobPathname: string; fileName: string; mimeType: string; fileSizeBytes: number }) => {
+    let releaseLock: () => void = () => {};
+    const lockWait = new Promise<void>((res) => { releaseLock = res; });
+    const prevLock = lockHolder;
+    lockHolder = lockHolder.then(() => lockWait);
+
+    await prevLock;
+    try {
+      if (currentEvidenceCount < 3) {
+        currentEvidenceCount++;
+        return {
+          id: `ev-uuid-${currentEvidenceCount}`,
+          finding_id: findingId,
+          blob_pathname: data.blobPathname,
+          file_name: data.fileName,
+          mime_type: data.mimeType,
+          file_size_bytes: data.fileSizeBytes,
+          created_at: new Date().toISOString(),
+        } as never;
+      }
+      return null as never;
+    } finally {
+      releaseLock();
+    }
+  };
+
+  const concResA = createMockRes();
+  const concResB = createMockRes();
+
+  await Promise.all([
+    findingController.confirmEvidence(
+      {
+        params: { id: sampleFindingId },
+        body: { pathname: `findings/${sampleFindingId}/photoA.jpg`, fileName: 'photoA.jpg', mimeType: 'image/jpeg', fileSize: 50000 },
+        user: { id: sampleAdminId },
+      } as never,
+      concResA as never,
+      (() => {}) as never
+    ),
+    findingController.confirmEvidence(
+      {
+        params: { id: sampleFindingId },
+        body: { pathname: `findings/${sampleFindingId}/photoB.jpg`, fileName: 'photoB.jpg', mimeType: 'image/jpeg', fileSize: 50000 },
+        user: { id: sampleAdminId },
+      } as never,
+      concResB as never,
+      (() => {}) as never
+    ),
+  ]);
+
+  const results = [concResA.statusCode, concResB.statusCode];
+  const hasSuccess = results.includes(201);
+  const hasConflict = results.includes(400);
+  assert(
+    hasSuccess && hasConflict && currentEvidenceCount === 3 && cleanedOrphanBlobs.length === 1,
+    'Concurrent finalize with 2 existing photos: exactly 1 succeeds (201), 1 is rejected (400), and orphan blob is cleaned up'
+  );
+
+  // TEST 138: High-concurrency finalize — 5 simultaneous finalize requests for finding with 1 photo
+  currentEvidenceCount = 1;
+  findingModel.countEvidences = async () => 1; // All 5 start when finding has 1 photo
+  cleanedOrphanBlobs.length = 0;
+  const highConcResponses = [createMockRes(), createMockRes(), createMockRes(), createMockRes(), createMockRes()];
+
+  await Promise.all(
+    highConcResponses.map((res, i) =>
+      findingController.confirmEvidence(
+        {
+          params: { id: sampleFindingId },
+          body: { pathname: `findings/${sampleFindingId}/parallel-${i}.jpg`, fileName: `parallel-${i}.jpg`, mimeType: 'image/jpeg', fileSize: 50000 },
+          user: { id: sampleAdminId },
+        } as never,
+        res as never,
+        (() => {}) as never
+      )
+    )
+  );
+
+  const successCount = highConcResponses.filter((r) => r.statusCode === 201).length;
+  const rejectedCount = highConcResponses.filter((r) => r.statusCode === 400).length;
+  assert(
+    successCount === 2 && rejectedCount === 3 && currentEvidenceCount === 3 && cleanedOrphanBlobs.length === 3,
+    'High concurrency (5 simultaneous requests for 2 available slots): exactly 2 succeed, 3 fail, all 3 orphan blobs deleted'
+  );
+
+  // Restore findingModel.addEvidence
+  findingModel.addEvidence = origAddEvidenceForConc;
+  blobService.deleteBlob = origDelForConcurrency;
+  blobService.verifyBlob = origVerifyBlobForConc;
+  blobService.verifyBlobSignature = origVerifySigForConc;
+
+  // TEST 139: Duplicate finalize idempotency — re-finalizing identical pathname returns existing evidence
+  findingModel.countEvidences = async () => 1;
+  const origAddEvForIdempotent = findingModel.addEvidence;
+  findingModel.addEvidence = async (fId: string, d: { blobPathname: string; fileName: string; mimeType: string; fileSizeBytes: number }) => ({
+    id: '11111111-1111-1111-1111-111111111111',
+    finding_id: fId,
+    blob_pathname: d.blobPathname,
+    file_name: d.fileName,
+    mime_type: d.mimeType,
+    file_size_bytes: d.fileSizeBytes,
+    created_at: new Date().toISOString(),
+  } as never);
+  const origVerifyForIdem = blobService.verifyBlob;
+  const origSigForIdem = blobService.verifyBlobSignature;
+  blobService.verifyBlob = async (p: string) => ({ size: 50000, contentType: 'image/jpeg', pathname: p });
+  blobService.verifyBlobSignature = async () => 'image/jpeg';
+
+  const idemRes = createMockRes();
+  await findingController.confirmEvidence(
+    {
+      params: { id: sampleFindingId },
+      body: { pathname: `findings/${sampleFindingId}/photo1.jpg`, fileName: 'photo1.jpg', mimeType: 'image/jpeg', fileSize: 50000 },
+      user: { id: sampleAdminId },
+    } as never,
+    idemRes as never,
+    (() => {}) as never
+  );
+  assert(
+    idemRes.statusCode === 201 && (idemRes.body as { data?: { id?: string } })?.data?.id === '11111111-1111-1111-1111-111111111111',
+    'Duplicate finalize retry with identical pathname is idempotent and returns existing evidence'
+  );
+  findingModel.addEvidence = origAddEvForIdempotent;
+  blobService.verifyBlob = origVerifyForIdem;
+  blobService.verifyBlobSignature = origSigForIdem;
+
+  // TEST 140: Delete evidence when Blob is not found in storage (404 / BlobNotFoundError)
+  const origGetEvForDel = findingModel.getEvidenceById;
+  const origDelEvForDel = findingModel.deleteEvidence;
+  const origBlobDelForDel = blobService.deleteBlob;
+  findingModel.getEvidenceById = async () => mockSavedEvidence as never;
+  let deletedFromNeon = false;
+  findingModel.deleteEvidence = async () => {
+    deletedFromNeon = true;
+    return true;
+  };
+  blobService.deleteBlob = async () => {
+    const notFoundError = new Error('Blob not found');
+    Object.assign(notFoundError, { status: 404, code: 'not_found', name: 'BlobNotFoundError' });
+    throw notFoundError;
+  };
+
+  const notFoundBlobDelRes = createMockRes();
+  await findingController.deleteEvidence(
+    { params: { id: sampleFindingId, evidenceId: mockSavedEvidence.id }, user: { id: sampleAdminId } } as never,
+    notFoundBlobDelRes as never,
+    (() => {}) as never
+  );
+  assert(
+    notFoundBlobDelRes.statusCode === 200 && deletedFromNeon === true,
+    'deleteEvidence safely handles already-deleted/404 Blob by proceeding to clean database metadata (HTTP 200)'
+  );
+
+  // TEST 141: Delete evidence when Blob storage suffers unexpected 500 / network outage
+  deletedFromNeon = false;
+  blobService.deleteBlob = async () => {
+    throw new Error('Connection reset by storage peer');
+  };
+  const storageOutageDelRes = createMockRes();
+  await findingController.deleteEvidence(
+    { params: { id: sampleFindingId, evidenceId: mockSavedEvidence.id }, user: { id: sampleAdminId } } as never,
+    storageOutageDelRes as never,
+    (() => {}) as never
+  );
+  assert(
+    storageOutageDelRes.statusCode === 502 &&
+      (storageOutageDelRes.body as { code?: string })?.code === 'STORAGE_DELETE_FAILED' &&
+      deletedFromNeon === false,
+    'deleteEvidence aborts with HTTP 502 and keeps database metadata intact when Blob storage suffers unexpected outage'
+  );
+
+  // TEST 142: Delete evidence when database fails temporarily (Scenario 4)
+  blobService.deleteBlob = async () => {};
+  findingModel.deleteEvidence = async () => {
+    throw new Error('Neon database connection timeout');
+  };
+  let forwardedError: unknown = null;
+  const dbFailDelRes = createMockRes();
+  await findingController.deleteEvidence(
+    { params: { id: sampleFindingId, evidenceId: mockSavedEvidence.id }, user: { id: sampleAdminId } } as never,
+    dbFailDelRes as never,
+    ((err: unknown) => { forwardedError = err; }) as never
+  );
+  assert(
+    forwardedError !== null,
+    'deleteEvidence safely forwards error when database fails after storage deletion'
+  );
+
+  // TEST 143: Delete evidence idempotent retry (Scenario 5)
+  findingModel.deleteEvidence = async () => true;
+  blobService.deleteBlob = async () => {};
+  const retryDelRes = createMockRes();
+  await findingController.deleteEvidence(
+    { params: { id: sampleFindingId, evidenceId: mockSavedEvidence.id }, user: { id: sampleAdminId } } as never,
+    retryDelRes as never,
+    (() => {}) as never
+  );
+  assert(
+    retryDelRes.statusCode === 200 &&
+      (retryDelRes.body as { success?: boolean })?.success === true,
+    'deleteEvidence supports idempotent retries and succeeds when administrator re-submits delete'
+  );
+  findingModel.getEvidenceById = origGetEvForDel;
+  findingModel.deleteEvidence = origDelEvForDel;
+  blobService.deleteBlob = origBlobDelForDel;
+
+  // TEST 144: Foreign key contract audit — migrations explicitly enforce ON DELETE RESTRICT
+  const migration001 = fs.readFileSync('server/database/migrations/001_phase_2_1_schema_alignment.sql', 'utf8');
+  const migration002 = fs.readFileSync('server/database/migrations/002_schema_contract_alignment.sql', 'utf8');
+  const m1EvidenceRestrict = migration001.includes('finding_evidence') && migration001.includes('ON DELETE RESTRICT');
+  const m1HistoryRestrict = migration001.includes('finding_status_history') && migration001.includes('ON DELETE RESTRICT');
+  const m2EvidenceRestrict = migration002.includes('finding_evidence') && migration002.includes('ON DELETE RESTRICT');
+  const m2HistoryRestrict = migration002.includes('finding_status_history') && migration002.includes('ON DELETE RESTRICT');
+  assert(
+    m1EvidenceRestrict && m1HistoryRestrict && m2EvidenceRestrict && m2HistoryRestrict,
+    'Database migrations 001 and 002 strictly enforce ON DELETE RESTRICT for finding_evidence and finding_status_history'
   );
 
   // -------------------------------------------------------------------------

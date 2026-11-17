@@ -26,6 +26,7 @@ export const CreateFindingPage: React.FC = () => {
   const navigate = useNavigate();
   const [evidences, setEvidences] = useState<FindingEvidence[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const todayStr = new Date().toISOString().split('T')[0];
@@ -60,6 +61,7 @@ export const CreateFindingPage: React.FC = () => {
   const onSubmit = async (data: FindingFormData) => {
     setIsSubmitting(true);
     setSubmitError(null);
+    setUploadStatus(null);
 
     try {
       const created = await findingService.createFinding({
@@ -79,11 +81,24 @@ export const CreateFindingPage: React.FC = () => {
         dueDate: data.dueDate || undefined,
       });
 
+      // Upload pending evidence files if any
+      const pendingFiles = evidences.filter((ev) => ev.file);
+      if (pendingFiles.length > 0) {
+        for (let i = 0; i < pendingFiles.length; i++) {
+          const item = pendingFiles[i];
+          if (item.file) {
+            setUploadStatus(`Mengunggah foto bukti (${i + 1}/${pendingFiles.length})...`);
+            await findingService.uploadEvidence(created.id, item.file);
+          }
+        }
+      }
+
       navigate(`/findings/${created.id}`);
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'Terjadi kesalahan saat menyimpan laporan.');
     } finally {
       setIsSubmitting(false);
+      setUploadStatus(null);
     }
   };
 
@@ -396,12 +411,10 @@ export const CreateFindingPage: React.FC = () => {
 
         {/* Section 5: Evidence Upload (Max 3 Photos) */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
-          <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-800 text-xs">
-            <span className="font-bold">Informasi Dokumentasi:</span> Unggah foto bukti saat ini berfungsi sebagai pratinjau lokal. Penyimpanan bukti foto ke Cloud Storage (Vercel Blob) akan diintegrasikan pada <strong>Phase 5</strong>.
-          </div>
           <EvidenceUploadField
             evidences={evidences}
             onChange={setEvidences}
+            disabled={isSubmitting}
             maxFiles={3}
           />
         </div>
@@ -421,7 +434,7 @@ export const CreateFindingPage: React.FC = () => {
             className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold shadow-sm transition hover:shadow flex items-center gap-2 disabled:opacity-50 cursor-pointer"
           >
             <Save className="w-4 h-4" />
-            <span>{isSubmitting ? 'Menyimpan...' : 'Kirim Laporan Temuan'}</span>
+            <span>{isSubmitting ? (uploadStatus || 'Menyimpan...') : 'Kirim Laporan Temuan'}</span>
           </button>
         </div>
       </form>

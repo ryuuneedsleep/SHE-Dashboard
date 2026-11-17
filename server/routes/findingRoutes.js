@@ -30,4 +30,10 @@ router.put('/:id/status', findingController.updateFindingStatus);
 // DELETE /api/v1/findings/:id - Soft archive finding
 router.delete('/:id', findingController.archiveFinding);
 
+// Evidence Management Endpoints (Strictly protected by Administrator authentication)
+router.post('/:id/evidence/upload-presign', findingController.uploadPresign);
+router.post('/:id/evidence/confirm', findingController.confirmEvidence);
+router.get('/:id/evidence/:evidenceId/content', findingController.getEvidenceContent);
+router.delete('/:id/evidence/:evidenceId', findingController.deleteEvidence);
+
 export default router;

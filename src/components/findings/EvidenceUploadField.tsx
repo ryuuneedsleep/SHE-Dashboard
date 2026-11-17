@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { FindingEvidence } from '../../types/finding.ts';
-import { Camera, Trash2, RefreshCw, AlertCircle, Info } from 'lucide-react';
+import { Camera, Trash2, RefreshCw, AlertCircle, ShieldCheck } from 'lucide-react';
 
 interface EvidenceUploadFieldProps {
   evidences: FindingEvidence[];
@@ -75,6 +75,8 @@ export const EvidenceUploadField: React.FC<EvidenceUploadFieldProps> = ({
       fileType: file.type,
       url: objectUrl,
       uploadedAt: new Date().toISOString(),
+      file: file,
+      isPendingUpload: true,
     };
 
     if (replaceIndexRef.current !== null) {
@@ -226,11 +228,11 @@ export const EvidenceUploadField: React.FC<EvidenceUploadFieldProps> = ({
         </button>
       )}
 
-      {/* Prototype Disclosure Notice */}
-      <div className="flex items-start gap-2 p-2.5 bg-blue-50/70 border border-blue-200/80 rounded-lg text-slate-600 text-[11px] leading-relaxed">
-        <Info className="w-3.5 h-3.5 text-blue-600 mt-0.5 shrink-0" />
+      {/* Vercel Blob Private Storage Notice */}
+      <div className="flex items-start gap-2 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-600 text-[11px] leading-relaxed">
+        <ShieldCheck className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
         <span>
-          <strong>Demo Mode:</strong> Foto hanya ditampilkan sementara di memori browser dan belum terhubung ke cloud storage.
+          <strong>Penyimpanan Privat Aman:</strong> Foto bukti temuan K3 disimpan secara terenkripsi dan privat menggunakan <strong>Vercel Blob Private Storage</strong>. Hanya Administrator terautentikasi yang dapat mengakses dan melihat bukti foto ini.
         </span>
       </div>
     </div>

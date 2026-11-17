@@ -45,11 +45,15 @@ export type DepartmentOption =
 
 export interface FindingEvidence {
   id: string;
+  findingId?: string;
+  blobPathname?: string;
   fileName: string;
   fileSize: number; // in bytes
   fileType: string;
-  url: string; // temporary in-memory object URL or preview URL
+  url: string; // streaming content URL or temporary in-memory object URL
   uploadedAt: string;
+  file?: File;
+  isPendingUpload?: boolean;
 }
 
 export interface FindingStatusHistoryItem {

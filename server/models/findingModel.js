@@ -3,7 +3,7 @@
  * Data layer for K3 Safety Finding Management with Neon PostgreSQL
  */
 
-import { sql } from '../config/database.js';
+import { sql, withTransaction } from '../config/database.js';
 
 export const ALLOWED_SORT_COLUMNS = {
   finding_date: 'f.finding_date',
@@ -345,6 +345,7 @@ export const findingModel = {
       fileName: e.file_name,
       fileSize: e.file_size_bytes,
       fileType: e.mime_type,
+      url: `/api/v1/findings/${e.finding_id}/evidence/${e.id}/content`,
       uploadedAt: e.created_at,
     }));
 
@@ -459,6 +460,119 @@ export const findingModel = {
     );
 
     return rows.length > 0;
+  },
+  /**
+   * Count active evidences for finding
+   */
+  async countEvidences(findingId) {
+    const rows = await sql.query(
+      `SELECT COUNT(*)::int AS count FROM finding_evidence WHERE finding_id = $1::uuid;`,
+      [findingId]
+    );
+    return rows[0]?.count || 0;
+  },
+
+  /**
+   * Get single evidence by evidenceId and findingId
+   */
+  async getEvidenceById(findingId, evidenceId) {
+    const rows = await sql.query(
+      `SELECT id, finding_id, blob_pathname, file_name, mime_type, file_size_bytes, created_at
+       FROM finding_evidence
+       WHERE id = $1::uuid AND finding_id = $2::uuid
+       LIMIT 1;`,
+      [evidenceId, findingId]
+    );
+    return rows[0] || null;
+  },
+
+  /**
+   * Add evidence metadata atomically via interactive transaction with row-level locking
+   * Guarantees max 3 evidences limit against concurrent finalize requests.
+   */
+  async addEvidence(findingId, { blobPathname, fileName, mimeType, fileSizeBytes }) {
+    return withTransaction(async (client) => {
+      // 1. Lock parent finding row exclusively
+      const findingLock = await client.query(
+        `SELECT id FROM findings WHERE id = $1::uuid AND archived_at IS NULL FOR UPDATE;`,
+        [findingId]
+      );
+
+      if (!findingLock.rows || findingLock.rows.length === 0) {
+        // Parent finding does not exist or has been archived
+        return null;
+      }
+
+      // 2. Check if this blob pathname already exists in finding_evidence
+      const existing = await client.query(
+        `SELECT id, finding_id, blob_pathname, file_name, mime_type, file_size_bytes, created_at
+         FROM finding_evidence
+         WHERE blob_pathname = $1
+         LIMIT 1;`,
+        [blobPathname]
+      );
+
+      if (existing.rows && existing.rows.length > 0) {
+        const match = existing.rows[0];
+        if (match.finding_id !== findingId) {
+          const err = new Error('PATHNAME_REGISTERED_TO_OTHER_FINDING');
+          err.code = 'PATHNAME_CONFLICT';
+          throw err;
+        }
+        // Idempotent retry: this exact blob is already finalized for this finding
+        return match;
+      }
+
+      // 3. Count current evidences under the active lock
+      const countRes = await client.query(
+        `SELECT COUNT(*)::int AS count FROM finding_evidence WHERE finding_id = $1::uuid;`,
+        [findingId]
+      );
+      const currentCount = countRes.rows[0]?.count || 0;
+
+      if (currentCount >= 3) {
+        // Limit of 3 photos reached
+        return null;
+      }
+
+      // 4. Insert new evidence using strictly the 7 canonical columns
+      const insertRes = await client.query(
+        `INSERT INTO finding_evidence (
+           id,
+           finding_id,
+           blob_pathname,
+           file_name,
+           mime_type,
+           file_size_bytes,
+           created_at
+         ) VALUES (
+           gen_random_uuid(),
+           $1::uuid,
+           $2::text,
+           $3::varchar,
+           $4::varchar,
+           $5::int,
+           NOW()
+         )
+         RETURNING id, finding_id, blob_pathname, file_name, mime_type, file_size_bytes, created_at;`,
+        [findingId, blobPathname, fileName, mimeType, fileSizeBytes]
+      );
+
+      return insertRes.rows[0] || null;
+    });
+  },
+
+  /**
+   * Delete evidence metadata from Neon
+   */
+  async deleteEvidence(findingId, evidenceId) {
+    const rows = await sql.query(
+      `DELETE FROM finding_evidence
+       WHERE id = $1::uuid AND finding_id = $2::uuid
+       RETURNING id, finding_id, blob_pathname, file_name;`,
+      [evidenceId, findingId]
+    );
+    return rows[0] || null;
   },
 };
 

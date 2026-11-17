@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -6,6 +6,7 @@ import { findingService } from '../../services/findingService.ts';
 import { findingFormSchema, type FindingFormData } from '../../utils/validation.ts';
 import type {
   FindingRecord,
+  FindingEvidence,
   DepartmentOption,
   FindingCategory,
   HazardCategory,
@@ -27,8 +28,13 @@ import {
   MapPin,
   CheckCircle2,
   FileText,
-  Info,
   Check,
+  Trash2,
+  Camera,
+  ZoomIn,
+  X,
+  Loader2,
+  ShieldCheck,
 } from 'lucide-react';
 
 function toCategoryEnum(val?: string): FindingCategory {
@@ -72,6 +78,89 @@ export const EditFindingPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
+
+  // Evidence management state
+  const [isUploadingEvidence, setIsUploadingEvidence] = useState(false);
+  const [evidenceUploadStatus, setEvidenceUploadStatus] = useState<string | null>(null);
+  const [evidenceError, setEvidenceError] = useState<string | null>(null);
+  const [evidenceSuccess, setEvidenceSuccess] = useState<string | null>(null);
+  const [evidenceToDelete, setEvidenceToDelete] = useState<FindingEvidence | null>(null);
+  const [isDeletingEvidence, setIsDeletingEvidence] = useState(false);
+  const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+
+  const evidenceFileInputRef = useRef<HTMLInputElement>(null);
+
+  const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+  const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
+
+  const handleEvidenceFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    setEvidenceError(null);
+    setEvidenceSuccess(null);
+    const files = e.target.files;
+    if (!files || files.length === 0 || !finding) return;
+
+    const file = files[0];
+
+    if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+      setEvidenceError('Format file tidak didukung. Harap pilih gambar dengan format JPG, PNG, atau WEBP.');
+      if (evidenceFileInputRef.current) evidenceFileInputRef.current.value = '';
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      setEvidenceError(`Ukuran file terlalu besar (${formatBytes(file.size)}). Batas maksimum per foto adalah 5 MB.`);
+      if (evidenceFileInputRef.current) evidenceFileInputRef.current.value = '';
+      return;
+    }
+
+    if (finding.evidences && finding.evidences.length >= 3) {
+      setEvidenceError('Laporan sudah memiliki batas maksimum 3 foto bukti.');
+      if (evidenceFileInputRef.current) evidenceFileInputRef.current.value = '';
+      return;
+    }
+
+    setIsUploadingEvidence(true);
+    setEvidenceUploadStatus('Mengunggah ke Vercel Blob Private Storage...');
+
+    try {
+      await findingService.uploadEvidence(finding.id, file, (percent) => {
+        setEvidenceUploadStatus(`Mengunggah foto bukti... ${percent}%`);
+      });
+
+      const refreshed = await findingService.getFindingById(finding.id);
+      if (refreshed) {
+        setFinding(refreshed);
+      }
+      setEvidenceSuccess(`Foto "${file.name}" berhasil diunggah.`);
+    } catch (err) {
+      setEvidenceError(err instanceof Error ? err.message : 'Gagal mengunggah foto bukti.');
+    } finally {
+      setIsUploadingEvidence(false);
+      setEvidenceUploadStatus(null);
+      if (evidenceFileInputRef.current) evidenceFileInputRef.current.value = '';
+    }
+  };
+
+  const handleConfirmDeleteEvidence = async () => {
+    if (!finding || !evidenceToDelete) return;
+    setIsDeletingEvidence(true);
+    setEvidenceError(null);
+    setEvidenceSuccess(null);
+
+    try {
+      await findingService.deleteEvidence(finding.id, evidenceToDelete.id);
+      const refreshed = await findingService.getFindingById(finding.id);
+      if (refreshed) {
+        setFinding(refreshed);
+      }
+      setEvidenceSuccess(`Foto "${evidenceToDelete.fileName}" berhasil dihapus.`);
+      setEvidenceToDelete(null);
+    } catch (err) {
+      setEvidenceError(err instanceof Error ? err.message : 'Gagal menghapus foto bukti.');
+    } finally {
+      setIsDeletingEvidence(false);
+    }
+  };
 
   const {
     register,
@@ -525,45 +614,126 @@ export const EditFindingPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Section 5: Evidence Documentation (Read-Only Display + Phase 5 Notice) */}
+        {/* Section 5: Evidence Documentation & Management */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 uppercase tracking-wide">
               <FileText className="w-4 h-4 text-blue-600" />
               <span>5. Dokumentasi Foto Bukti ({finding.evidences?.length || 0}/3)</span>
             </div>
-            <span className="text-[10px] text-slate-400 font-medium">Cloud Storage (Phase 5)</span>
+            <div className="flex items-center gap-1.5 text-[11px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 font-medium">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Vercel Blob Private</span>
+            </div>
           </div>
 
-          {finding.evidences && finding.evidences.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {finding.evidences.map((ev, idx) => (
-                <div
-                  key={ev.id || idx}
-                  className="bg-slate-50 border border-slate-200 rounded-xl overflow-hidden p-3 space-y-1.5"
-                >
-                  <div className="aspect-video bg-slate-100 rounded-lg flex items-center justify-center text-slate-400">
-                    <FileText className="w-6 h-6 text-slate-400" />
-                  </div>
-                  <p className="text-xs font-bold text-slate-800 truncate" title={ev.fileName}>
-                    {ev.fileName}
-                  </p>
-                  <p className="text-[10px] text-slate-500">
-                    {formatBytes(ev.fileSize || 0)} &bull; {ev.fileType || 'Image'}
-                  </p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="p-4 text-center text-xs text-slate-400 bg-slate-50 rounded-xl border border-slate-100">
-              Belum ada foto bukti yang terlampir pada laporan temuan ini.
+          {/* Hidden File Input for Direct Add */}
+          <input
+            ref={evidenceFileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={handleEvidenceFileSelected}
+            className="hidden"
+            disabled={isUploadingEvidence || isSubmitting}
+          />
+
+          {evidenceError && (
+            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
+              <span>{evidenceError}</span>
             </div>
           )}
 
-          <div className="flex items-start gap-2 p-3 bg-blue-50/70 border border-blue-200/80 rounded-xl text-slate-600 text-xs leading-relaxed">
-            <Info className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
+          {evidenceSuccess && (
+            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs flex items-center gap-2">
+              <Check className="w-4 h-4 shrink-0 text-emerald-600" />
+              <span>{evidenceSuccess}</span>
+            </div>
+          )}
+
+          {isUploadingEvidence && (
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-800 text-xs flex items-center gap-2">
+              <Loader2 className="w-4 h-4 shrink-0 animate-spin text-blue-600" />
+              <span>{evidenceUploadStatus || 'Mengunggah foto bukti...'}</span>
+            </div>
+          )}
+
+          {/* Gallery & Add Card */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {finding.evidences?.map((ev, idx) => (
+              <div
+                key={ev.id || idx}
+                className="group relative bg-slate-50 border border-slate-200 rounded-xl overflow-hidden shadow-xs hover:border-slate-300 transition"
+              >
+                <div className="relative aspect-video w-full bg-slate-100 overflow-hidden">
+                  <img
+                    src={ev.url}
+                    alt={ev.fileName}
+                    className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src =
+                        'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="%2394a3b8" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>';
+                    }}
+                  />
+
+                  {/* Actions overlay */}
+                  <div className="absolute top-1.5 right-1.5 flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setZoomedImage(ev.url)}
+                      className="p-1 rounded-md bg-white/90 text-slate-700 hover:text-blue-600 hover:bg-white shadow transition cursor-pointer"
+                      title="Perbesar foto"
+                    >
+                      <ZoomIn className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEvidenceToDelete(ev)}
+                      disabled={isDeletingEvidence}
+                      className="p-1 rounded-md bg-white/90 text-slate-700 hover:text-red-600 hover:bg-white shadow transition cursor-pointer disabled:opacity-50"
+                      title="Hapus foto"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-2.5 text-xs">
+                  <p className="font-semibold text-slate-800 truncate" title={ev.fileName}>
+                    {ev.fileName}
+                  </p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">
+                    {formatBytes(ev.fileSize || 0)} &bull; {ev.fileType || 'Image'}
+                  </p>
+                </div>
+              </div>
+            ))}
+
+            {/* Add Photo Button (if < 3) */}
+            {(!finding.evidences || finding.evidences.length < 3) && (
+              <button
+                type="button"
+                onClick={() => evidenceFileInputRef.current?.click()}
+                disabled={isUploadingEvidence || isSubmitting}
+                className="min-h-[140px] border-2 border-dashed border-slate-300 hover:border-red-400 bg-slate-50 hover:bg-red-50/20 rounded-xl p-4 flex flex-col items-center justify-center gap-1.5 transition cursor-pointer group disabled:opacity-50"
+              >
+                <div className="w-9 h-9 rounded-full bg-white group-hover:bg-red-100 flex items-center justify-center text-slate-400 group-hover:text-red-600 shadow-xs transition">
+                  <Camera className="w-4 h-4" />
+                </div>
+                <span className="text-xs font-semibold text-slate-700 group-hover:text-red-600">
+                  Tambah Foto Bukti
+                </span>
+                <span className="text-[10px] text-slate-400 text-center">
+                  Maks. 5 MB (JPG, PNG, WEBP)
+                </span>
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-start gap-2 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-600 text-[11px] leading-relaxed">
+            <ShieldCheck className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
             <span>
-              <strong>Integrasi Cloud Storage:</strong> Pengunggahan dan pembaruan foto bukti fisik ke cloud storage permanen (Vercel Blob Private) akan diimplementasikan pada <strong>Phase 5</strong>. Metadata bukti yang telah tersimpan tetap dipertahankan.
+              <strong>Penyimpanan Terenkripsi & Privat:</strong> Seluruh foto bukti diunggah langsung ke <strong>Vercel Blob Private Storage</strong>. Foto hanya dapat dilihat oleh Administrator yang terautentikasi dan tidak dapat diakses secara publik.
             </span>
           </div>
         </div>
@@ -587,6 +757,86 @@ export const EditFindingPage: React.FC = () => {
           </button>
         </div>
       </form>
+
+      {/* Delete Evidence Confirmation Modal */}
+      {evidenceToDelete && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-xl border border-slate-200">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div className="flex items-center gap-2 text-slate-900 font-bold text-sm">
+                <Trash2 className="w-4 h-4 text-red-600" />
+                <span>Hapus Foto Bukti</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEvidenceToDelete(null)}
+                className="text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-2 text-xs">
+              <p className="text-slate-600 leading-relaxed">
+                Apakah Anda yakin ingin menghapus foto bukti{' '}
+                <strong className="text-slate-900">{evidenceToDelete.fileName}</strong>?
+              </p>
+              <p className="text-rose-600 text-[11px] font-medium bg-rose-50 p-2 rounded-lg border border-rose-100">
+                Peringatan: Foto akan dihapus secara permanen dari Vercel Blob Private Storage dan database Neon. Tindakan ini tidak dapat dibatalkan.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setEvidenceToDelete(null)}
+                disabled={isDeletingEvidence}
+                className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteEvidence}
+                disabled={isDeletingEvidence}
+                className="px-3.5 py-1.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg transition disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+              >
+                {isDeletingEvidence ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Menghapus...</span>
+                  </>
+                ) : (
+                  <span>Ya, Hapus Foto</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Image Zoom Lightbox Modal */}
+      {zoomedImage && (
+        <div
+          className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4"
+          onClick={() => setZoomedImage(null)}
+        >
+          <div className="relative max-w-4xl max-h-[90vh] overflow-hidden rounded-xl">
+            <button
+              type="button"
+              onClick={() => setZoomedImage(null)}
+              className="absolute top-3 right-3 p-2 rounded-full bg-black/60 text-white hover:bg-black/90 transition z-10 cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <img
+              src={zoomedImage}
+              alt="Zoomed Evidence"
+              className="max-w-full max-h-[85vh] object-contain rounded-xl"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
