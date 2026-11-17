@@ -34,7 +34,6 @@ import {
   ZoomIn,
   X,
   Loader2,
-  ShieldCheck,
 } from 'lucide-react';
 
 function toCategoryEnum(val?: string): FindingCategory {
@@ -616,15 +615,9 @@ export const EditFindingPage: React.FC = () => {
 
         {/* Section 5: Evidence Documentation & Management */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 uppercase tracking-wide">
-              <FileText className="w-4 h-4 text-blue-600" />
-              <span>5. Dokumentasi Foto Bukti ({finding.evidences?.length || 0}/3)</span>
-            </div>
-            <div className="flex items-center gap-1.5 text-[11px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 font-medium">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Penyimpanan Aman</span>
-            </div>
+          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 uppercase tracking-wide border-b border-slate-100 pb-2">
+            <FileText className="w-4 h-4 text-blue-600" />
+            <span>5. Dokumentasi Foto Bukti ({finding.evidences?.length || 0}/3)</span>
           </div>
 
           {/* Hidden File Input for Direct Add */}
@@ -728,13 +721,6 @@ export const EditFindingPage: React.FC = () => {
                 </span>
               </button>
             )}
-          </div>
-
-          <div className="flex items-start gap-2 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-600 text-[11px] leading-relaxed">
-            <ShieldCheck className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
-            <span>
-              <strong>Penyimpanan Terenkripsi & Privat:</strong> Seluruh foto bukti disimpan secara terenkripsi dan privat. Foto hanya dapat diakses oleh Administrator yang terautentikasi.
-            </span>
           </div>
         </div>
 
