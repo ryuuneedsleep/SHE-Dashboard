@@ -2023,6 +2023,91 @@ async function runTests() {
   assert(serverClosed, 'Ephemeral HTTP server closes cleanly without hanging');
 
   // -------------------------------------------------------------------------
+  // 10. VERCEL SERVERLESS FUNCTION & API ROUTING (PHASE 4.3 / VERCEL FIX)
+  // -------------------------------------------------------------------------
+  console.log('\n[10. VERCEL SERVERLESS FUNCTION & API ROUTING]');
+
+  // TEST 112: vercel.json specifies valid API rewrite and SPA fallback exclusion
+  const vercelConfig = JSON.parse(fs.readFileSync('vercel.json', 'utf8'));
+  const hasApiRewrite = vercelConfig.rewrites?.some(
+    (r: { source: string; destination: string }) =>
+      r.source === '/api/(.*)' && r.destination === '/api/[...path]'
+  );
+  const hasSpaFallback = vercelConfig.rewrites?.some(
+    (r: { source: string; destination: string }) =>
+      r.destination === '/index.html' && r.source.includes('?!api')
+  );
+  assert(
+    Boolean(hasApiRewrite && hasSpaFallback),
+    'vercel.json configures explicit /api/(.*) rewrite to /api/[...path] and excludes /api from SPA fallback'
+  );
+
+  // TEST 113: api/[...path].js exists and exports a valid default handler function
+  const vercelModule = await import('../api/[...path].js');
+  const vercelHandler = vercelModule.default;
+  assert(
+    typeof vercelHandler === 'function',
+    'api/[...path].js exports a valid default Vercel serverless handler'
+  );
+
+  // TEST 114: Vercel serverless handler forwards /api/v1/health and returns HTTP 200 with JSON envelope
+  const vercelHealthRes = createMockRes();
+  await new Promise<void>((resolve) => {
+    const mockReq = {
+      url: '/api/v1/health',
+      method: 'GET',
+      headers: { accept: 'application/json' },
+    };
+    vercelHandler(mockReq as never, vercelHealthRes as never);
+    setTimeout(resolve, 50);
+  });
+  const vercelHealthPayload = vercelHealthRes.body as { success: boolean; data: { api: string } };
+  assert(
+    vercelHealthRes.statusCode === 200 &&
+      vercelHealthPayload?.success === true &&
+      vercelHealthPayload?.data?.api === 'healthy',
+    'Vercel handler executes /api/v1/health and returns HTTP 200 with standard health envelope'
+  );
+
+  // TEST 115: Vercel serverless handler normalizes stripped /v1/health to /api/v1/health
+  const vercelStrippedRes = createMockRes();
+  await new Promise<void>((resolve) => {
+    const mockReq = {
+      url: '/v1/health',
+      method: 'GET',
+      headers: { accept: 'application/json' },
+    };
+    vercelHandler(mockReq as never, vercelStrippedRes as never);
+    setTimeout(resolve, 50);
+  });
+  const vercelStrippedPayload = vercelStrippedRes.body as { success: boolean; data: { api: string } };
+  assert(
+    vercelStrippedRes.statusCode === 200 &&
+      vercelStrippedPayload?.success === true &&
+      vercelStrippedPayload?.data?.api === 'healthy',
+    'Vercel handler normalizes stripped /v1/health into /api/v1/health and returns HTTP 200'
+  );
+
+  // TEST 116: Vercel serverless handler returns JSON 404 envelope (not HTML) for unmatched API routes
+  const vercelNotFoundRes = createMockRes();
+  await new Promise<void>((resolve) => {
+    const mockReq = {
+      url: '/api/v1/unmatched-route-xyz',
+      method: 'GET',
+      headers: { accept: 'application/json' },
+    };
+    vercelHandler(mockReq as never, vercelNotFoundRes as never);
+    setTimeout(resolve, 50);
+  });
+  const vercelNotFoundPayload = vercelNotFoundRes.body as { success: boolean; code: string };
+  assert(
+    vercelNotFoundRes.statusCode === 404 &&
+      vercelNotFoundPayload?.success === false &&
+      vercelNotFoundPayload?.code === 'NOT_FOUND',
+    'Vercel handler returns JSON 404 envelope (not HTML) for unmatched API paths'
+  );
+
+  // -------------------------------------------------------------------------
   // FINAL TEST REPORT
   // -------------------------------------------------------------------------
   console.log(`\n======================================================`);

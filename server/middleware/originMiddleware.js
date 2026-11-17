@@ -43,8 +43,8 @@ export function isOriginAllowed(requestOrigin, req) {
     return true;
   }
 
-  // Same-origin matching against current Host header (e.g. deployed domain)
-  const host = req?.headers?.host;
+  // Same-origin matching against current Host header or Vercel x-forwarded-host header
+  const host = req?.headers?.['x-forwarded-host'] || req?.headers?.host;
   if (host) {
     if (requestOrigin === `http://${host}` || requestOrigin === `https://${host}`) {
       return true;
