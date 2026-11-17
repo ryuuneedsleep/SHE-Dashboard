@@ -1,411 +1,574 @@
-import React, { useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
-import { authService } from '../../services/authService';
-import { safetyService } from '../../services/safetyService';
-import type { FindingLifecycleStatus } from '../../types/safety';
-import { FindingReviewModal } from '../../components/findings/FindingReviewModal';
-import { Button } from '../../components/common/Button';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { findingService } from '../../services/findingService.ts';
+import type { FindingRecord, FindingStatus } from '../../types/finding.ts';
+import { StatusBadge } from '../../components/common/StatusBadge.tsx';
+import { RiskBadge } from '../../components/common/RiskBadge.tsx';
 import {
   ArrowLeft,
   AlertTriangle,
-  Clock,
-  User,
-  Layers,
-  XCircle,
-  CheckSquare,
-  ShieldAlert,
-  Link as LinkIcon,
-  ExternalLink,
+  Calendar,
+  MapPin,
+  CheckCircle2,
+  Edit3,
+  Archive,
   ZoomIn,
+  X,
+  FileText,
+  User,
+  Shield,
+  Clock,
+  History,
+  ArrowRightCircle,
 } from 'lucide-react';
+
+function formatCategoryLabel(cat?: string): string {
+  if (!cat) return '-';
+  if (cat === 'UNSAFE_CONDITION' || cat === 'Unsafe Condition') return 'Unsafe Condition';
+  if (cat === 'UNSAFE_ACTION' || cat === 'Unsafe Action') return 'Unsafe Action';
+  if (cat === 'IMPROVEMENT_OPPORTUNITY' || cat === 'Improvement Opportunity') return 'Improvement Opportunity';
+  return cat.replace(/_/g, ' ');
+}
+
+function formatHazardLabel(haz?: string | null): string {
+  if (!haz) return '-';
+  const map: Record<string, string> = {
+    PHYSICAL: 'Physical',
+    CHEMICAL: 'Chemical',
+    BIOLOGICAL: 'Biological',
+    ERGONOMIC: 'Ergonomic',
+    ENVIRONMENTAL: 'Environmental',
+  };
+  return map[haz] || haz;
+}
 
 export const FindingDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const currentUser = authService.getCurrentUser();
 
-  const [finding, setFinding] = useState(() => (id ? safetyService.getFindingById(id) : undefined));
-  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
-  const [isZoomImageOpen, setIsZoomImageOpen] = useState(false);
+  const [finding, setFinding] = useState<FindingRecord | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+  const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
 
-  if (!currentUser) {
+  // Status transition state
+  const [targetStatus, setTargetStatus] = useState<FindingStatus | null>(null);
+  const [statusNote, setStatusNote] = useState('');
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [statusError, setStatusError] = useState<string | null>(null);
+
+  const fetchFinding = useCallback(async () => {
+    if (!id) return;
+    try {
+      const item = await findingService.getFindingById(id);
+      setFinding(item);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+    let active = true;
+
+    findingService
+      .getFindingById(id)
+      .then((item) => {
+        if (active) setFinding(item);
+      })
+      .catch(() => {
+        if (active) setFinding(null);
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [id]);
+
+  const handleConfirmArchive = async () => {
+    if (!finding) return;
+    setIsArchiving(true);
+    try {
+      await findingService.archiveFinding(finding.id);
+      navigate('/findings');
+    } catch {
+      // ignore
+    } finally {
+      setIsArchiving(false);
+    }
+  };
+
+  const handleConfirmStatusTransition = async () => {
+    if (!finding || !targetStatus) return;
+    setIsUpdatingStatus(true);
+    setStatusError(null);
+
+    try {
+      await findingService.updateStatus(finding.id, targetStatus, statusNote.trim() || undefined);
+      setTargetStatus(null);
+      setStatusNote('');
+      await fetchFinding();
+    } catch (err) {
+      setStatusError(err instanceof Error ? err.message : 'Gagal mengubah status temuan.');
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
+  if (isLoading) {
     return (
-      <div className="p-8 text-center text-xs">
-        <p>Sesi login berakhir. Harap login kembali.</p>
-        <Link to="/login" className="text-red-600 underline font-bold mt-2 inline-block">
-          Ke Halaman Login
-        </Link>
+      <div className="max-w-3xl mx-auto space-y-4 animate-pulse pb-20">
+        <div className="h-8 bg-slate-200 rounded w-1/3" />
+        <div className="h-64 bg-slate-200 rounded-xl" />
+        <div className="h-40 bg-slate-200 rounded-xl" />
       </div>
     );
   }
 
   if (!finding) {
     return (
-      <div className="min-h-[70vh] flex flex-col items-center justify-center p-6 text-center space-y-3">
-        <div className="w-12 h-12 rounded-full bg-red-50 text-[#EB0A1E] flex items-center justify-center">
+      <div className="max-w-md mx-auto text-center py-16 space-y-3 pb-20">
+        <div className="w-12 h-12 rounded-full bg-red-50 text-red-600 mx-auto flex items-center justify-center">
           <AlertTriangle className="w-6 h-6" />
         </div>
-        <h2 className="text-lg font-bold text-gray-900">Temuan Keselamatan Tidak Ditemukan</h2>
-        <p className="text-xs text-gray-500 max-w-sm">
-          Nomor referensi atau ID temuan <strong>{id}</strong> tidak terdaftar dalam sistem SPLD SAFETY.
+        <h2 className="text-base font-bold text-slate-900">Laporan Tidak Ditemukan</h2>
+        <p className="text-xs text-slate-500">
+          Laporan dengan ID &quot;{id}&quot; tidak ditemukan dalam dataset sistem.
         </p>
-        <Link to="/findings">
-          <Button variant="outline" size="sm" leftIcon={<ArrowLeft className="w-3.5 h-3.5" />}>
-            Kembali ke Daftar Temuan
-          </Button>
-        </Link>
+        <button
+          type="button"
+          onClick={() => navigate('/findings')}
+          className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-xs font-semibold text-slate-700 inline-flex items-center gap-1.5"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Kembali ke Daftar Temuan</span>
+        </button>
       </div>
     );
   }
-
-  // Access Control Scoping Check
-  const isReporter = currentUser.noreg === finding.reportedByNoreg;
-  const isApprover = currentUser.role === 'APPROVER';
-  const hasAreaAccess =
-    !isApprover || (currentUser.areaAccess || []).includes(finding.operationalAreaId);
-
-  // Members can ONLY view their own reports
-  if (currentUser.role === 'MEMBER' && !isReporter) {
-    return (
-      <div className="min-h-[70vh] flex flex-col items-center justify-center p-6 text-center space-y-3">
-        <div className="w-12 h-12 rounded-full bg-red-50 text-red-600 flex items-center justify-center">
-          <ShieldAlert className="w-6 h-6" />
-        </div>
-        <h2 className="text-lg font-bold text-gray-900">Akses Dibatasi (Unauthorized)</h2>
-        <p className="text-xs text-gray-500 max-w-sm">
-          Sebagai Member, Anda hanya diizinkan untuk melihat laporan temuan keselamatan yang Anda laporkan sendiri.
-        </p>
-        <Link to="/my-findings">
-          <Button variant="outline" size="sm" leftIcon={<ArrowLeft className="w-3.5 h-3.5" />}>
-            Ke Laporan Saya
-          </Button>
-        </Link>
-      </div>
-    );
-  }
-
-  const getStatusBadge = (status: FindingLifecycleStatus) => {
-    switch (status) {
-      case 'Submitted':
-        return 'bg-blue-50 text-blue-700 border-blue-200';
-      case 'Under Review':
-        return 'bg-amber-50 text-amber-700 border-amber-200';
-      case 'Accepted':
-        return 'bg-purple-50 text-purple-700 border-purple-200';
-      case 'In Progress':
-        return 'bg-indigo-50 text-indigo-700 border-indigo-200';
-      case 'Resolved':
-        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-      case 'Closed':
-        return 'bg-gray-100 text-gray-700 border-gray-300';
-      case 'Rejected':
-        return 'bg-red-50 text-red-700 border-red-200';
-      default:
-        return 'bg-gray-100 text-gray-600 border-gray-200';
-    }
-  };
 
   return (
-    <div className="min-h-screen bg-slate-50 py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-5xl mx-auto space-y-6">
-        {/* Navigation Breadcrumb & Actions */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div className="max-w-3xl mx-auto space-y-5 pb-24">
+      {/* Top Navigation & Actions */}
+      <div className="flex items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={() => navigate('/findings')}
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 transition"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Kembali ke Temuan K3</span>
+        </button>
+
+        <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => navigate(-1)}
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-600 hover:text-gray-900 transition-colors"
+            onClick={() => navigate(`/findings/${finding.id}/edit`)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-xs font-bold transition"
           >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Kembali</span>
+            <Edit3 className="w-3.5 h-3.5" />
+            <span>Edit Laporan</span>
           </button>
+          <button
+            type="button"
+            onClick={() => setIsArchiveModalOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded-lg text-xs font-bold transition"
+          >
+            <Archive className="w-3.5 h-3.5" />
+            <span>Arsipkan</span>
+          </button>
+        </div>
+      </div>
 
-          {/* Review Action Gated by Universal Anti Self-Approval */}
-          {currentUser.role !== 'MEMBER' && currentUser.role !== 'MANAGEMENT' && (
-            <div>
-              {isReporter ? (
-                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-xs font-medium">
-                  <ShieldAlert className="w-4 h-4 text-amber-600 flex-shrink-0" />
-                  <span>Proteksi Anti Self-Approval: Pelapor tidak dapat mereview temuan sendiri</span>
-                </div>
-              ) : hasAreaAccess ? (
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={() => setIsReviewModalOpen(true)}
-                  leftIcon={<CheckSquare className="w-4 h-4" />}
-                >
-                  Review & Otorisasi Status
-                </Button>
-              ) : (
-                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 border border-red-200 text-red-800 text-xs">
-                  <ShieldAlert className="w-3.5 h-3.5 text-red-600" />
-                  <span>Area Access Terbatas</span>
-                </div>
-              )}
-            </div>
-          )}
+      {/* Main Header Card */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-sm font-bold text-red-600 bg-red-50 px-2.5 py-1 rounded border border-red-200">
+              {finding.referenceNo}
+            </span>
+            <StatusBadge status={finding.status} size="md" />
+            <RiskBadge level={finding.riskLevel} size="md" />
+          </div>
+          <span className="text-xs text-slate-400 flex items-center gap-1">
+            <Calendar className="w-3.5 h-3.5" />
+            {finding.findingDate}
+          </span>
         </div>
 
-        {/* Main Finding Overview Card */}
-        <div className="bg-white rounded-2xl shadow-xs border border-gray-200 overflow-hidden">
-          {/* Header Banner */}
-          <div className="p-5 sm:p-6 border-b border-gray-200 bg-gray-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-gray-200 text-gray-800">
-                  {finding.referenceNo}
-                </span>
-                <span
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    finding.source === 'DIRECT'
-                      ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                      : 'bg-amber-50 text-amber-700 border border-amber-200'
-                  }`}
-                >
-                  Jalur: {finding.source === 'DIRECT' ? 'Direct Finding' : 'Patrol Finding'}
-                </span>
-                <span
-                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold text-white shadow-2xs"
-                  style={{ backgroundColor: finding.riskDisplayColor || '#EF4444' }}
-                >
-                  {finding.riskLevelName}
-                </span>
-              </div>
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-gray-900">
-                {finding.title}
-              </h1>
-            </div>
+        <div>
+          <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
+            {finding.title}
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-600 mt-2 leading-relaxed whitespace-pre-line">
+            {finding.description}
+          </p>
+        </div>
 
-            <div className="flex items-center gap-3">
-              <span
-                className={`text-xs font-bold px-3 py-1.5 rounded-full border shadow-2xs ${getStatusBadge(
-                  finding.status
-                )}`}
+        {/* Status Lifecycle Transition Action */}
+        <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50 p-3 rounded-xl">
+          <div className="text-xs">
+            <span className="font-bold text-slate-800 block">Status Alur K3:</span>
+            {finding.status === 'OPEN' && (
+              <span className="text-slate-500">Laporan baru dibuat dan belum ditangani.</span>
+            )}
+            {finding.status === 'IN_PROGRESS' && (
+              <span className="text-slate-500">Tindakan perbaikan sedang dalam proses penanganan.</span>
+            )}
+            {finding.status === 'CLOSED' && (
+              <span className="text-emerald-700 font-medium">Temuan telah ditutup dan tindakan perbaikan selesai diverifikasi.</span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            {finding.status === 'OPEN' && (
+              <button
+                type="button"
+                onClick={() => setTargetStatus('IN_PROGRESS')}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold transition shadow-xs cursor-pointer"
               >
-                Status: {finding.status}
+                <ArrowRightCircle className="w-3.5 h-3.5" />
+                <span>Mulai Penanganan (IN_PROGRESS)</span>
+              </button>
+            )}
+
+            {finding.status === 'IN_PROGRESS' && (
+              <button
+                type="button"
+                onClick={() => setTargetStatus('CLOSED')}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition shadow-xs cursor-pointer"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>Selesaikan Temuan (CLOSED)</span>
+              </button>
+            )}
+
+            {finding.status === 'CLOSED' && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Status Terminal Selesai</span>
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Grid: Finding Classification & Location */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Classification */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-3">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 uppercase tracking-wide border-b border-slate-100 pb-2">
+            <Shield className="w-3.5 h-3.5 text-red-600" />
+            <span>Klasifikasi Bahaya & Risiko</span>
+          </div>
+
+          <div className="space-y-2 text-xs">
+            <div className="flex justify-between">
+              <span className="text-slate-500">Kategori Temuan:</span>
+              <span className="font-semibold text-slate-800">{formatCategoryLabel(finding.findingCategory)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500">Kategori Bahaya:</span>
+              <span className="font-semibold text-slate-800">{formatHazardLabel(finding.hazardCategory)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500">Tingkat Risiko:</span>
+              <RiskBadge level={finding.riskLevel} size="sm" />
+            </div>
+          </div>
+        </div>
+
+        {/* Location Information */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-3">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 uppercase tracking-wide border-b border-slate-100 pb-2">
+            <MapPin className="w-3.5 h-3.5 text-red-600" />
+            <span>Lokasi Temuan</span>
+          </div>
+
+          <div className="space-y-2 text-xs">
+            <div className="flex justify-between">
+              <span className="text-slate-500">Area Operasional:</span>
+              <span className="font-semibold text-slate-800">{finding.operationalArea}</span>
+            </div>
+            <div>
+              <span className="text-slate-500 block mb-0.5">Detail Lokasi:</span>
+              <span className="font-medium text-slate-800 bg-slate-50 p-2 rounded-lg block">
+                {finding.locationDetail}
               </span>
             </div>
           </div>
+        </div>
+      </div>
 
-          {/* Rejection Alert Banner if Rejected */}
-          {finding.status === 'Rejected' && finding.rejectionReason && (
-            <div className="p-4 bg-red-50 border-b border-red-200 text-red-900 flex items-start gap-3 text-xs">
-              <XCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <div className="font-bold text-sm text-red-950">Laporan Ditolak oleh Reviewer</div>
-                <p className="mt-1 leading-relaxed text-red-900 font-medium">
-                  Alasan Penolakan: &ldquo;{finding.rejectionReason}&rdquo;
-                </p>
-              </div>
-            </div>
-          )}
+      {/* Reporter Information (No NPK/Noreg) */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-3">
+        <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 uppercase tracking-wide border-b border-slate-100 pb-2">
+          <User className="w-3.5 h-3.5 text-red-600" />
+          <span>Informasi Pelapor</span>
+        </div>
 
-          {/* Body Content */}
-          <div className="p-5 sm:p-6 space-y-6 text-xs">
-            {/* Description */}
-            <div className="space-y-1.5">
-              <h3 className="font-bold text-gray-700 uppercase tracking-wider text-[11px]">
-                Deskripsi Observasi Bahaya
-              </h3>
-              <p className="text-sm text-gray-800 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-gray-200 whitespace-pre-wrap">
-                {finding.description}
-              </p>
-            </div>
-
-            {/* Originating Patrol Link if PATROL source */}
-            {finding.source === 'PATROL' && finding.patrolId && (
-              <div className="p-3.5 rounded-xl bg-amber-50/60 border border-amber-200 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <LinkIcon className="w-4 h-4 text-amber-600 flex-shrink-0" />
-                  <div>
-                    <span className="font-bold text-amber-950">Berasal dari Safety Patrol Terjadwal:</span>
-                    <span className="ml-1.5 font-mono font-bold text-gray-900">{finding.patrolRefNo}</span>
-                  </div>
-                </div>
-                <Link
-                  to={`/patrols/${finding.patrolId}`}
-                  className="inline-flex items-center gap-1 font-bold text-amber-700 hover:text-amber-900 hover:underline"
-                >
-                  <span>Buka Patroli</span>
-                  <ExternalLink className="w-3 h-3" />
-                </Link>
-              </div>
-            )}
-
-            {/* Master Data Classification Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              <div className="p-3 bg-gray-50 rounded-xl border border-gray-200 space-y-1">
-                <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">
-                  Kategori Temuan
-                </span>
-                <span className="font-bold text-gray-900 text-xs block">{finding.categoryName}</span>
-              </div>
-
-              <div className="p-3 bg-gray-50 rounded-xl border border-gray-200 space-y-1">
-                <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">
-                  Kategori Bahaya (Hazard)
-                </span>
-                <span className="font-bold text-gray-900 text-xs block">
-                  {finding.hazardCategoryName || '-'}
-                </span>
-              </div>
-
-              <div className="p-3 bg-gray-50 rounded-xl border border-gray-200 space-y-1">
-                <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">
-                  Area Operasional
-                </span>
-                <span className="font-bold text-gray-900 text-xs block">
-                  {finding.operationalAreaName}
-                </span>
-                {finding.locationDetails && (
-                  <span className="text-[10px] text-gray-500 block truncate" title={finding.locationDetails}>
-                    {finding.locationDetails}
-                  </span>
-                )}
-              </div>
-
-              <div className="p-3 bg-gray-50 rounded-xl border border-gray-200 space-y-1">
-                <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">
-                  Departemen & Seksi
-                </span>
-                <span className="font-bold text-gray-900 text-xs block">
-                  {finding.departmentName}
-                </span>
-                <span className="text-[10px] text-gray-500 block">{finding.sectionName}</span>
-              </div>
-            </div>
-
-            {/* Photo Evidence Section */}
-            <div className="space-y-2">
-              <h3 className="font-bold text-gray-700 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
-                <Layers className="w-3.5 h-3.5 text-[#EB0A1E]" />
-                <span>Dokumentasi Foto Bukti Temuan</span>
-              </h3>
-
-              {finding.evidence ? (
-                <div className="p-3 rounded-xl border border-gray-200 bg-gray-50 flex flex-col sm:flex-row items-center gap-4">
-                  <div
-                    className="relative w-48 h-36 rounded-lg overflow-hidden border border-gray-300 bg-black cursor-pointer group flex-shrink-0"
-                    onClick={() => setIsZoomImageOpen(true)}
-                  >
-                    <img
-                      src={finding.evidence.previewUrl}
-                      alt={finding.evidence.fileName}
-                      className="w-full h-full object-cover group-hover:opacity-90 transition-opacity"
-                    />
-                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-xs font-bold gap-1">
-                      <ZoomIn className="w-4 h-4" />
-                      <span>Perbesar</span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1 text-xs">
-                    <p className="font-bold text-gray-900">{finding.evidence.fileName}</p>
-                    <p className="text-gray-500 text-[11px]">
-                      Format: {finding.evidence.fileType} • Diunggah pada:{' '}
-                      {new Date(finding.evidence.uploadedAt).toLocaleString('id-ID')}
-                    </p>
-                    <p className="text-[10px] text-gray-400 italic">
-                      Klik pada gambar untuk melihat tampilan penuh resolusi tinggi.
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl text-gray-400 italic text-center">
-                  Tidak ada lampiran foto bukti pada laporan ini.
-                </div>
-              )}
-            </div>
-
-            {/* Reporter Information Box */}
-            <div className="p-4 rounded-xl bg-gray-50 border border-gray-200 space-y-2">
-              <h3 className="font-bold text-gray-700 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
-                <User className="w-3.5 h-3.5 text-[#EB0A1E]" />
-                <span>Informasi Pelapor</span>
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <span className="text-gray-400 text-[10px] block">Nama Pelapor:</span>
-                  <span className="font-bold text-gray-900 text-xs">{finding.reportedByName}</span>
-                </div>
-                <div>
-                  <span className="text-gray-400 text-[10px] block">Noreg (NPK):</span>
-                  <span className="font-mono font-bold text-gray-900 text-xs">{finding.reportedByNoreg}</span>
-                </div>
-                <div>
-                  <span className="text-gray-400 text-[10px] block">Waktu Submit:</span>
-                  <span className="text-gray-700 text-xs">
-                    {new Date(finding.reportedAt).toLocaleString('id-ID', {
-                      dateStyle: 'long',
-                      timeStyle: 'short',
-                    })}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Audit Review Timeline */}
-            <div className="space-y-3 pt-2">
-              <h3 className="font-bold text-gray-700 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-[#EB0A1E]" />
-                <span>Rekam Jejak Audit & Riwayat Review</span>
-              </h3>
-
-              <div className="relative border-l-2 border-gray-200 ml-3 space-y-4 py-1">
-                {finding.reviewHistory.map((rev) => (
-                  <div key={rev.id} className="relative pl-5 text-xs">
-                    <span className="absolute -left-[7px] top-1 w-3 h-3 rounded-full bg-[#EB0A1E] border-2 border-white ring-2 ring-red-100" />
-                    <div className="font-bold text-gray-900 flex items-center gap-2 flex-wrap">
-                      <span>Status berubah ke &ldquo;{rev.newStatus}&rdquo;</span>
-                      <span className="text-gray-400 text-[10px] font-normal">
-                        ({new Date(rev.timestamp).toLocaleString('id-ID')})
-                      </span>
-                    </div>
-                    <div className="text-[11px] text-gray-600 mt-0.5">
-                      Aktor: <strong>{rev.actorName}</strong> ({rev.actorNoreg} • {rev.actorRole})
-                    </div>
-                    {rev.notes && (
-                      <p className="mt-1 text-gray-700 bg-gray-50 p-2 rounded border border-gray-200">
-                        Catatan: {rev.notes}
-                      </p>
-                    )}
-                    {rev.rejectionReason && (
-                      <p className="mt-1 text-red-700 bg-red-50 p-2 rounded border border-red-200 font-medium">
-                        Alasan Penolakan: {rev.rejectionReason}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+          <div>
+            <span className="text-slate-500 block text-[11px]">Nama Pelapor:</span>
+            <span className="font-bold text-slate-900 mt-0.5 block">{finding.reporterName}</span>
+          </div>
+          <div>
+            <span className="text-slate-500 block text-[11px]">Departemen:</span>
+            <span className="font-semibold text-slate-800 mt-0.5 block">
+              {finding.reporterDepartment === 'Lain-lain'
+                ? `${finding.reporterDepartment} (${finding.otherDepartmentName})`
+                : finding.reporterDepartment}
+            </span>
+          </div>
+          <div>
+            <span className="text-slate-500 block text-[11px]">Section / Area Pelapor:</span>
+            <span className="font-semibold text-slate-800 mt-0.5 block">{finding.reporterSection}</span>
           </div>
         </div>
       </div>
 
-      {/* Review Modal */}
-      <FindingReviewModal
-        isOpen={isReviewModalOpen}
-        onClose={() => setIsReviewModalOpen(false)}
-        onSuccess={(updated) => setFinding(updated)}
-        finding={finding}
-        currentUser={currentUser}
-      />
+      {/* Corrective Action Section */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-3">
+        <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 uppercase tracking-wide border-b border-slate-100 pb-2">
+          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+          <span>Tindakan Perbaikan (Corrective Action)</span>
+        </div>
 
-      {/* Full Photo Zoom Modal */}
-      {isZoomImageOpen && finding.evidence && (
+        <div className="space-y-2 text-xs">
+          <div>
+            <span className="text-slate-500 block mb-1">Rencana / Catatan Tindakan Perbaikan:</span>
+            <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 text-slate-800 leading-relaxed font-medium">
+              {finding.correctiveAction || 'Belum ada catatan tindakan perbaikan.'}
+            </div>
+          </div>
+          {finding.dueDate && (
+            <div className="flex items-center gap-2 pt-1 text-slate-600">
+              <Clock className="w-3.5 h-3.5 text-amber-500" />
+              <span>
+                Target Selesai (Due Date): <strong>{finding.dueDate}</strong>
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Evidence Gallery (up to 3 photos) */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-3">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 uppercase tracking-wide">
+            <FileText className="w-3.5 h-3.5 text-blue-600" />
+            <span>Dokumentasi Foto Bukti ({finding.evidences.length}/3)</span>
+          </div>
+          <span className="text-[10px] text-slate-400 font-medium">Klik foto untuk perbesar</span>
+        </div>
+
+        {finding.evidences.length === 0 ? (
+          <div className="p-6 text-center text-xs text-slate-400 bg-slate-50 rounded-xl">
+            Tidak ada foto bukti yang dilampirkan pada laporan ini.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {finding.evidences.map((ev) => (
+              <div
+                key={ev.id}
+                onClick={() => setZoomedImage(ev.url)}
+                className="group relative aspect-video rounded-xl overflow-hidden bg-slate-100 border border-slate-200 cursor-pointer shadow-xs"
+              >
+                <img
+                  src={ev.url}
+                  alt={ev.fileName}
+                  className="w-full h-full object-cover transition duration-200 group-hover:scale-105"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).src =
+                      'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="%2394a3b8" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>';
+                  }}
+                />
+                <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                  <ZoomIn className="w-6 h-6" />
+                </div>
+                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-slate-900/80 to-transparent p-2 text-white">
+                  <p className="text-[10px] font-medium truncate">{ev.fileName}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Chronological Status History Timeline */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-3">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 uppercase tracking-wide">
+            <History className="w-3.5 h-3.5 text-blue-600" />
+            <span>Riwayat Transisi Status ({finding.statusHistory?.length || 0})</span>
+          </div>
+          <span className="text-[10px] text-slate-400 font-medium">Urutan Kronologis</span>
+        </div>
+
+        {(!finding.statusHistory || finding.statusHistory.length === 0) ? (
+          <div className="p-4 text-center text-xs text-slate-400 bg-slate-50 rounded-xl">
+            Belum ada catatan riwayat status.
+          </div>
+        ) : (
+          <div className="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
+            {finding.statusHistory.map((item, idx) => (
+              <div key={item.id || idx} className="relative text-xs">
+                {/* Timeline node */}
+                <div className="absolute -left-6 top-0.5 w-4 h-4 rounded-full border-2 border-white bg-red-600 shadow-xs flex items-center justify-center" />
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-bold text-slate-800">
+                    {item.oldStatus ? `${item.oldStatus} ➔ ${item.newStatus}` : `Status Awal: ${item.newStatus}`}
+                  </span>
+                  <span className="text-[10px] text-slate-400">
+                    {new Date(item.createdAt).toLocaleString('id-ID')}
+                  </span>
+                </div>
+                <p className="text-slate-600 mt-0.5">
+                  {item.note || 'Tidak ada catatan tambahan.'}
+                </p>
+                <p className="text-[10px] text-slate-400 mt-0.5">
+                  Oleh: {item.changedByName || 'Administrator'}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Status Transition Modal */}
+      {targetStatus && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-xl border border-slate-200">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div className="flex items-center gap-2 text-slate-900 font-bold text-sm">
+                <ArrowRightCircle className="w-5 h-5 text-red-600" />
+                <span>Ubah Status Temuan</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setTargetStatus(null)}
+                className="text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <p className="text-slate-600 leading-relaxed">
+                Anda akan mengubah status laporan{' '}
+                <strong className="text-slate-900">{finding.referenceNo}</strong> dari{' '}
+                <strong className="text-slate-900">{finding.status}</strong> menjadi{' '}
+                <strong className="text-red-600">{targetStatus}</strong>.
+              </p>
+
+              {statusError && (
+                <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-lg text-rose-700 text-[11px]">
+                  {statusError}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">
+                  Catatan Transisi (Opsional):
+                </label>
+                <textarea
+                  value={statusNote}
+                  onChange={(e) => setStatusNote(e.target.value)}
+                  placeholder="Tambahkan catatan tindakan atau verifikasi perbaikan..."
+                  rows={3}
+                  className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setTargetStatus(null)}
+                className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmStatusTransition}
+                disabled={isUpdatingStatus}
+                className="px-3.5 py-1.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg transition disabled:opacity-50 cursor-pointer"
+              >
+                {isUpdatingStatus ? 'Memperbarui...' : 'Konfirmasi Ubah Status'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Image Zoom Modal */}
+      {zoomedImage && (
         <div
-          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 cursor-pointer"
-          onClick={() => setIsZoomImageOpen(false)}
+          className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4"
+          onClick={() => setZoomedImage(null)}
         >
-          <div className="max-w-4xl max-h-[90vh] relative">
+          <div className="relative max-w-4xl max-h-[90vh] overflow-hidden rounded-xl">
+            <button
+              type="button"
+              onClick={() => setZoomedImage(null)}
+              className="absolute top-3 right-3 p-2 rounded-full bg-black/60 text-white hover:bg-black/90 transition z-10"
+            >
+              <X className="w-5 h-5" />
+            </button>
             <img
-              src={finding.evidence.previewUrl}
-              alt={finding.evidence.fileName}
-              className="max-w-full max-h-[85vh] rounded-lg object-contain mx-auto"
+              src={zoomedImage}
+              alt="Zoomed Evidence"
+              className="max-w-full max-h-[85vh] object-contain rounded-xl"
             />
-            <p className="text-white text-center text-xs mt-2 font-mono">
-              {finding.evidence.fileName} • Klik di mana saja untuk menutup
+          </div>
+        </div>
+      )}
+
+      {/* Archive Modal */}
+      {isArchiveModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-xl border border-slate-200">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div className="flex items-center gap-2 text-rose-600">
+                <AlertTriangle className="w-5 h-5" />
+                <h3 className="font-bold text-sm text-slate-900">Konfirmasi Arsipkan</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsArchiveModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Apakah Anda yakin ingin mengarsipkan laporan{' '}
+              <strong className="text-slate-900">{finding.referenceNo}</strong>?
             </p>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsArchiveModalOpen(false)}
+                className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmArchive}
+                disabled={isArchiving}
+                className="px-3.5 py-1.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg transition disabled:opacity-50"
+              >
+                {isArchiving ? 'Mengarsipkan...' : 'Ya, Arsipkan'}
+              </button>
+            </div>
           </div>
         </div>
       )}

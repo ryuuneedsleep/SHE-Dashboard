@@ -32,6 +32,25 @@ export default defineConfig({
           },
         ],
       },
+      workbox: {
+        navigateFallbackDenylist: [/^\/api/],
+        runtimeCaching: [
+          {
+            // Explicitly force all /api/* requests to bypass cache completely
+            urlPattern: /^\/api\/.*/i,
+            handler: 'NetworkOnly',
+          },
+        ],
+      },
     }),
   ],
+  server: {
+    port: 5173,
+    proxy: {
+      '/api': {
+        target: 'http://127.0.0.1:3001',
+        changeOrigin: true,
+      },
+    },
+  },
 });

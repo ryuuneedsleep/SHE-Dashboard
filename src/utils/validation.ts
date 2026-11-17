@@ -1,125 +1,156 @@
 /**
- * SPLD SAFETY - Safety Management System
- * Module 01: Form Validation Schemas using Zod
+ * SPLD SAFETY - Final Project Refactoring
+ * Form Validation Schemas using Zod
  */
 
 import { z } from 'zod';
+import {
+  DEPARTMENT_LIST,
+  FINDING_STATUS_LIST,
+} from '../types/finding.ts';
 
-// Indonesian mobile phone regex supporting formats like 08..., +628..., 628...
 const PHONE_REGEX = /^(?:\+62|62|0)8[1-9][0-9]{6,11}$/;
-
-export const registrationSchema = z
-  .object({
-    // Section A: Personal Information
-    fullName: z
-      .string()
-      .trim()
-      .min(2, 'Full name must be at least 2 characters')
-      .max(100, 'Full name cannot exceed 100 characters'),
-    noreg: z
-      .string()
-      .trim()
-      .min(3, 'Employee number (Noreg) must be at least 3 characters')
-      .max(20, 'Employee number cannot exceed 20 characters'),
-    phone: z
-      .string()
-      .trim()
-      .regex(
-        PHONE_REGEX,
-        'Enter a valid Indonesian mobile number (e.g., 081234567890 or +6281234567890)'
-      ),
-    email: z
-      .string()
-      .trim()
-      .email('Please enter a valid corporate or official email address')
-      .max(120, 'Email address cannot exceed 120 characters'),
-
-    // Section B: Work Information
-    department: z
-      .string()
-      .trim()
-      .min(1, 'Please select a valid department'),
-    otherDepartmentName: z.string().trim().optional(),
-    section: z
-      .string()
-      .trim()
-      .min(1, 'Please select or specify a Section / Area'),
-    position: z
-      .string()
-      .trim()
-      .min(1, 'Please select a Position / Jabatan'),
-    otherPositionName: z.string().trim().optional(),
-
-    // Section C: Account Security
-    password: z
-      .string()
-      .min(8, 'Password must be at least 8 characters long')
-      .regex(/[A-Z]/, 'Password must include at least one uppercase letter')
-      .regex(/[0-9]/, 'Password must include at least one number')
-      .regex(
-        /[^a-zA-Z0-9]/,
-        'Password must include at least one special character (!@#$%^&*...)'
-      ),
-    confirmPassword: z.string().min(1, 'Please confirm your password'),
-
-    // Section D: Agreement
-    agreement: z.boolean().refine((val) => val === true, {
-      message: 'You must confirm and accept the terms and conditions to proceed',
-    }),
-  })
-  .superRefine((data, ctx) => {
-    // If department is "Lain-lain", otherDepartmentName is mandatory
-    if (data.department === 'Lain-lain') {
-      if (!data.otherDepartmentName || data.otherDepartmentName.trim().length < 2) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['otherDepartmentName'],
-          message: 'Please specify your department name',
-        });
-      }
-    }
-
-    // If position is "Other", otherPositionName is mandatory
-    if (data.position === 'Other') {
-      if (!data.otherPositionName || data.otherPositionName.trim().length < 2) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['otherPositionName'],
-          message: 'Please specify your position title',
-        });
-      }
-    }
-
-    // Passwords must match
-    if (data.password !== data.confirmPassword) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['confirmPassword'],
-        message: 'Passwords do not match',
-      });
-    }
-  });
-
-export type RegistrationFormValues = z.infer<typeof registrationSchema>;
 
 export const loginSchema = z.object({
   email: z
     .string()
     .trim()
-    .min(1, 'Email address is required')
-    .email('Please enter a valid email address'),
-  password: z.string().min(1, 'Password is required'),
-  rememberMe: z.boolean().optional(),
+    .min(1, 'Email wajib diisi')
+    .email('Format email tidak valid'),
+  password: z
+    .string()
+    .min(1, 'Password wajib diisi'),
 });
 
-export type LoginFormValues = z.infer<typeof loginSchema>;
+export type LoginFormData = z.infer<typeof loginSchema>;
 
-export const forgotPasswordSchema = z.object({
+export const findingFormSchema = z
+  .object({
+    // Reporter Information
+    reporterName: z
+      .string()
+      .trim()
+      .min(2, 'Nama pelapor minimal 2 karakter')
+      .max(100, 'Nama pelapor maksimal 100 karakter'),
+    reporterDepartment: z.enum(
+      DEPARTMENT_LIST as [string, ...string[]],
+      { error: 'Pilih departemen pelapor yang valid' }
+    ),
+    otherDepartmentName: z.string().trim().optional(),
+    reporterSection: z
+      .string()
+      .trim()
+      .min(2, 'Section / Area pelapor minimal 2 karakter')
+      .max(100, 'Section pelapor maksimal 100 karakter'),
+
+    // Finding Information
+    title: z
+      .string()
+      .trim()
+      .min(3, 'Judul temuan minimal 3 karakter')
+      .max(150, 'Judul temuan maksimal 150 karakter'),
+    description: z
+      .string()
+      .trim()
+      .min(5, 'Deskripsi temuan minimal 5 karakter'),
+    findingCategory: z.enum(
+      [
+        'UNSAFE_CONDITION',
+        'UNSAFE_ACTION',
+        'IMPROVEMENT_OPPORTUNITY',
+        'Unsafe Condition',
+        'Unsafe Action',
+        'Improvement Opportunity',
+      ] as [string, ...string[]],
+      { error: 'Pilih kategori temuan yang valid' }
+    ),
+    hazardCategory: z
+      .enum([
+        'PHYSICAL',
+        'CHEMICAL',
+        'BIOLOGICAL',
+        'ERGONOMIC',
+        'ENVIRONMENTAL',
+        'Physical',
+        'Chemical',
+        'Biological',
+        'Ergonomic',
+        'Environmental',
+      ] as [string, ...string[]])
+      .optional()
+      .or(z.literal('')),
+    riskLevel: z.enum(
+      [
+        'LOW',
+        'MEDIUM',
+        'HIGH',
+        'CRITICAL',
+        'Low',
+        'Medium',
+        'High',
+        'Critical',
+      ] as [string, ...string[]],
+      { error: 'Pilih tingkat risiko yang valid' }
+    ),
+    findingDate: z
+      .string()
+      .min(1, 'Tanggal temuan wajib diisi'),
+
+    // Location
+    operationalArea: z
+      .string()
+      .trim()
+      .min(2, 'Area operasional wajib diisi'),
+    locationDetail: z
+      .string()
+      .trim()
+      .min(2, 'Detail lokasi temuan wajib diisi'),
+
+    // Corrective Action
+    correctiveAction: z.string().trim().optional(),
+    dueDate: z.string().optional(),
+
+    // Status (used in edit form)
+    status: z
+      .enum(FINDING_STATUS_LIST as [string, ...string[]])
+      .optional(),
+  })
+  .refine(
+    (data) => {
+      if (data.reporterDepartment === 'Lain-lain') {
+        return !!data.otherDepartmentName && data.otherDepartmentName.trim().length > 0;
+      }
+      return true;
+    },
+    {
+      message: 'Nama departemen lain wajib diisi jika memilih "Lain-lain"',
+      path: ['otherDepartmentName'],
+    }
+  );
+
+export type FindingFormData = z.infer<typeof findingFormSchema>;
+
+export const profileFormSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(2, 'Nama minimal 2 karakter'),
   email: z
     .string()
     .trim()
-    .min(1, 'Email address is required')
-    .email('Please enter a valid corporate email address'),
+    .email('Format email tidak valid'),
+  phone: z
+    .string()
+    .trim()
+    .regex(PHONE_REGEX, 'Nomor handphone tidak valid (contoh: 081234567890)'),
+  position: z
+    .string()
+    .trim()
+    .min(2, 'Jabatan wajib diisi'),
+  department: z
+    .string()
+    .trim()
+    .min(2, 'Departemen wajib diisi'),
 });
 
-export type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
+export type ProfileFormData = z.infer<typeof profileFormSchema>;

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { authService } from '../../services/authService';
+import { useAuth } from '../../context/useAuth.ts';
+import { PageLoadingFallback } from '../common/PageLoadingFallback.tsx';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -8,21 +9,17 @@ interface ProtectedRouteProps {
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const location = useLocation();
-  const currentUser = authService.getCurrentUser();
+  const { isAuthenticated, isLoading } = useAuth();
 
-  if (!currentUser) {
-    // Unauthenticated user trying to access operational routes
-    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+  if (isLoading) {
+    return <PageLoadingFallback />;
   }
 
-  // Account status verification: only Active can access
-  if (currentUser.status !== 'Active') {
-    if (currentUser.status === 'Pending') {
-      return <Navigate to="/registration-pending" replace />;
-    }
-    return <Navigate to="/login" state={{ statusDenied: currentUser.status }} replace />;
+  if (!isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   return <>{children}</>;
 };
 
+export default ProtectedRoute;
