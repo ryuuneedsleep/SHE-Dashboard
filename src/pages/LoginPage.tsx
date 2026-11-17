@@ -9,7 +9,6 @@ import {
   Lock,
   AlertCircle,
   ArrowRight,
-  ShieldCheck,
 } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
@@ -72,14 +71,8 @@ export const LoginPage: React.FC = () => {
             SPLD <span className="text-[#EB0A1E]">SAFETY</span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 font-medium">
-            Safety Management System • Progressive Web Application
+            Safety Management System
           </p>
-        </div>
-
-        {/* Security Badge */}
-        <div className="bg-slate-100/80 border border-slate-200 rounded-xl p-2.5 flex items-center justify-center gap-2 text-xs text-slate-600 font-medium">
-          <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-          <span>Autentikasi Aman & Terenkripsi</span>
         </div>
 
         {/* Login Card */}
@@ -140,10 +133,6 @@ export const LoginPage: React.FC = () => {
             </button>
           </form>
         </div>
-
-        <p className="text-center text-[11px] text-slate-400">
-          SPLD SAFETY • Tugas Akhir Praktikum Pemrograman Perangkat Bergerak
-        </p>
       </div>
     </div>
   );

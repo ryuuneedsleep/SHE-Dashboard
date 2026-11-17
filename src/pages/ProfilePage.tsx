@@ -12,7 +12,6 @@ import {
   Briefcase,
   Building2,
   LogOut,
-  ShieldCheck,
   Edit3,
   X,
   Save,
@@ -107,14 +106,6 @@ export const ProfilePage: React.FC = () => {
           <span>{successMessage}</span>
         </div>
       )}
-
-      {/* Verified Session Status Banner */}
-      <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-start gap-2.5 text-xs text-emerald-900">
-        <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-        <div>
-          <span className="font-bold">Sesi Aktif Terverifikasi:</span> Anda terautentikasi sebagai Administrator sistem SPLD SAFETY.
-        </div>
-      </div>
 
       {/* Profile Card */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
