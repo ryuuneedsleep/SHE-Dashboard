@@ -112,7 +112,7 @@ export const ProfilePage: React.FC = () => {
       <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-start gap-2.5 text-xs text-emerald-900">
         <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
         <div>
-          <span className="font-bold">Sesi Aktif Terverifikasi:</span> Anda terautentikasi sebagai Administrator sistem SPLD SAFETY via database Neon PostgreSQL.
+          <span className="font-bold">Sesi Aktif Terverifikasi:</span> Anda terautentikasi sebagai Administrator sistem SPLD SAFETY.
         </div>
       </div>
 

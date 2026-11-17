@@ -120,7 +120,7 @@ export const EditFindingPage: React.FC = () => {
     }
 
     setIsUploadingEvidence(true);
-    setEvidenceUploadStatus('Mengunggah ke Vercel Blob Private Storage...');
+    setEvidenceUploadStatus('Mengunggah foto bukti...');
 
     try {
       await findingService.uploadEvidence(finding.id, file, (percent) => {
@@ -353,7 +353,7 @@ export const EditFindingPage: React.FC = () => {
       {isSuccess && (
         <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs flex items-center gap-2">
           <Check className="w-4 h-4 shrink-0 text-emerald-600" />
-          <span>Perubahan temuan berhasil disimpan ke Neon PostgreSQL. Mengalihkan...</span>
+          <span>Perubahan temuan berhasil disimpan. Mengalihkan...</span>
         </div>
       )}
 
@@ -623,7 +623,7 @@ export const EditFindingPage: React.FC = () => {
             </div>
             <div className="flex items-center gap-1.5 text-[11px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 font-medium">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Vercel Blob Private</span>
+              <span>Penyimpanan Aman</span>
             </div>
           </div>
 
@@ -733,7 +733,7 @@ export const EditFindingPage: React.FC = () => {
           <div className="flex items-start gap-2 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-600 text-[11px] leading-relaxed">
             <ShieldCheck className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
             <span>
-              <strong>Penyimpanan Terenkripsi & Privat:</strong> Seluruh foto bukti diunggah langsung ke <strong>Vercel Blob Private Storage</strong>. Foto hanya dapat dilihat oleh Administrator yang terautentikasi dan tidak dapat diakses secara publik.
+              <strong>Penyimpanan Terenkripsi & Privat:</strong> Seluruh foto bukti disimpan secara terenkripsi dan privat. Foto hanya dapat diakses oleh Administrator yang terautentikasi.
             </span>
           </div>
         </div>
@@ -782,7 +782,7 @@ export const EditFindingPage: React.FC = () => {
                 <strong className="text-slate-900">{evidenceToDelete.fileName}</strong>?
               </p>
               <p className="text-rose-600 text-[11px] font-medium bg-rose-50 p-2 rounded-lg border border-rose-100">
-                Peringatan: Foto akan dihapus secara permanen dari Vercel Blob Private Storage dan database Neon. Tindakan ini tidak dapat dibatalkan.
+                Peringatan: Foto bukti akan dihapus secara permanen dari sistem. Tindakan ini tidak dapat dibatalkan.
               </p>
             </div>
 

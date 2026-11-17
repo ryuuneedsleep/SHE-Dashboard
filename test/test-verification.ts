@@ -2815,6 +2815,74 @@ async function runTests() {
   );
 
   // -------------------------------------------------------------------------
+  // 13. PRODUCTION ERROR HANDLING SANITIZATION & SECURITY (PHASE 6.2)
+  // -------------------------------------------------------------------------
+  console.log('\n[13. PRODUCTION ERROR HANDLING SANITIZATION & SECURITY (PHASE 6.2)]');
+
+  const origNodeEnv = process.env.NODE_ENV;
+
+  // TEST 145: errorMiddleware sanitizes raw 500 internal errors in production
+  process.env.NODE_ENV = 'production';
+  const prodMockRes = createMockRes();
+  const rawDbError = new Error('NeonDbError: syntax error at or near "SELECT" at /server/models/findingModel.js:123');
+  rawDbError.name = 'NeonDbError';
+  // Suppress console.error during expected test run
+  const origConsoleError = console.error;
+  console.error = () => {};
+  try {
+    errorMiddleware(rawDbError, { method: 'POST', url: '/api/v1/findings' } as never, prodMockRes as never, (() => {}) as never);
+  } finally {
+    console.error = origConsoleError;
+  }
+
+  const prodErrorBody = prodMockRes.body as { success: boolean; code: string; message: string; debugCode?: string };
+  assert(
+    prodMockRes.statusCode === 500 &&
+    prodErrorBody?.success === false &&
+    prodErrorBody?.code === 'INTERNAL_SERVER_ERROR' &&
+    prodErrorBody?.message === 'Terjadi kesalahan internal pada server. Silakan coba beberapa saat lagi.' &&
+    prodErrorBody?.debugCode === undefined,
+    'errorMiddleware in production mode sanitizes raw internal exceptions and suppresses stack/debug details'
+  );
+
+  // TEST 146: errorMiddleware preserves technical details in development mode for debugging
+  process.env.NODE_ENV = 'development';
+  const devMockRes = createMockRes();
+  const devRawError = new Error('Database connection timed out');
+  devRawError.name = 'TimeoutError';
+  console.error = () => {};
+  try {
+    errorMiddleware(devRawError, { method: 'GET', url: '/api/v1/dashboard' } as never, devMockRes as never, (() => {}) as never);
+  } finally {
+    console.error = origConsoleError;
+  }
+
+  const devErrorBody = devMockRes.body as { success: boolean; code: string; message: string; debugCode?: string };
+  assert(
+    devMockRes.statusCode === 500 &&
+    devErrorBody?.message === 'Database connection timed out' &&
+    devErrorBody?.debugCode === 'TimeoutError',
+    'errorMiddleware in development mode preserves technical error message and attaches debugCode'
+  );
+
+  // TEST 147: errorMiddleware preserves specific application errors (< 500) in production
+  process.env.NODE_ENV = 'production';
+  const appMockRes = createMockRes();
+  const clientAppError = Object.assign(new Error('Format file tidak didukung.'), { status: 400, code: 'INVALID_MIME_TYPE' });
+  errorMiddleware(clientAppError, { method: 'POST', url: '/api/v1/findings/1/evidence/confirm' } as never, appMockRes as never, (() => {}) as never);
+
+  const appErrorBody = appMockRes.body as { success: boolean; code: string; message: string };
+  assert(
+    appMockRes.statusCode === 400 &&
+    appErrorBody?.code === 'INVALID_MIME_TYPE' &&
+    appErrorBody?.message === 'Format file tidak didukung.',
+    'errorMiddleware preserves specific application error codes and messages for client errors (< 500)'
+  );
+
+  // Restore NODE_ENV
+  process.env.NODE_ENV = origNodeEnv;
+
+  // -------------------------------------------------------------------------
   // FINAL TEST REPORT
   // -------------------------------------------------------------------------
   console.log(`\n======================================================`);

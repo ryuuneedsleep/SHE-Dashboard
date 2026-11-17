@@ -5,11 +5,11 @@ import {
   Cpu,
   Layers,
   CheckCircle,
-  FileText,
-  Activity,
   Heart,
   Code,
-  Globe,
+  Database,
+  Server,
+  Lock,
 } from 'lucide-react';
 
 export const AboutPage: React.FC = () => {
@@ -38,7 +38,7 @@ export const AboutPage: React.FC = () => {
         </p>
 
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 text-xs font-semibold backdrop-blur-xs">
-          <span>Versi Aplikasi: v2.0.0-phase1 (Refactored PWA)</span>
+          <span>Versi Aplikasi: v2.0.0 (Release Candidate)</span>
         </div>
       </div>
 
@@ -79,9 +79,9 @@ export const AboutPage: React.FC = () => {
           </div>
 
           <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
-            <span className="font-bold text-slate-900 block">Evidence Upload (UI In-Memory)</span>
+            <span className="font-bold text-slate-900 block">Dokumentasi Foto Bukti K3 (Private Storage)</span>
             <p className="text-slate-600 leading-relaxed">
-              Dukungan dokumentasi hingga 3 foto (JPEG/PNG/WebP, maks. 5MB) dengan preview interaktif dan zoom view.
+              Dukungan dokumentasi hingga 3 foto (JPEG/PNG/WebP, maks. 5MB) dengan validasi konten, penyimpanan cloud privat terenkripsi, dan streaming aman khusus Administrator.
             </p>
           </div>
 
@@ -107,40 +107,36 @@ export const AboutPage: React.FC = () => {
             <span>React 19 & TypeScript</span>
           </div>
           <div className="p-2.5 rounded-lg bg-slate-50 flex items-center gap-2">
+            <Server className="w-3.5 h-3.5 text-emerald-500" />
+            <span>Express.js REST API</span>
+          </div>
+          <div className="p-2.5 rounded-lg bg-slate-50 flex items-center gap-2">
+            <Database className="w-3.5 h-3.5 text-sky-500" />
+            <span>PostgreSQL Database</span>
+          </div>
+          <div className="p-2.5 rounded-lg bg-slate-50 flex items-center gap-2">
+            <Lock className="w-3.5 h-3.5 text-amber-500" />
+            <span>Private Evidence Storage</span>
+          </div>
+          <div className="p-2.5 rounded-lg bg-slate-50 flex items-center gap-2">
             <Layers className="w-3.5 h-3.5 text-cyan-500" />
             <span>Tailwind CSS</span>
           </div>
           <div className="p-2.5 rounded-lg bg-slate-50 flex items-center gap-2">
-            <Globe className="w-3.5 h-3.5 text-purple-500" />
-            <span>Vite 8 & PWA Plugin</span>
-          </div>
-          <div className="p-2.5 rounded-lg bg-slate-50 flex items-center gap-2">
-            <Smartphone className="w-3.5 h-3.5 text-emerald-500" />
-            <span>Workbox Service Worker</span>
-          </div>
-          <div className="p-2.5 rounded-lg bg-slate-50 flex items-center gap-2">
-            <FileText className="w-3.5 h-3.5 text-amber-500" />
-            <span>React Hook Form & Zod</span>
-          </div>
-          <div className="p-2.5 rounded-lg bg-slate-50 flex items-center gap-2">
-            <Activity className="w-3.5 h-3.5 text-red-500" />
-            <span>Lucide React Icons</span>
+            <Smartphone className="w-3.5 h-3.5 text-purple-500" />
+            <span>Vite PWA & Workbox</span>
           </div>
         </div>
       </div>
 
-      {/* Developer Placeholder */}
+      {/* Developer Information */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-2">
         <div className="flex items-center gap-2 text-xs font-bold text-slate-800 uppercase tracking-wide">
           <Heart className="w-4 h-4 text-rose-500" />
           <span>Informasi Pengembang</span>
         </div>
         <p className="text-xs text-slate-600 leading-relaxed">
-          <strong>Tim Pengembang:</strong> Mahasiswa Praktikum Pemrograman Perangkat Bergerak
-          <br />
-          <strong>Program Studi / Jurusan:</strong> [Placeholder Mahasiswa / Kelompok Praktikum]
-          <br />
-          <strong>Institusi:</strong> [Placeholder Nama Perguruan Tinggi / Laboratorium]
+          Aplikasi ini dikembangkan sebagai <strong>Tugas Akhir Praktikum Pemrograman Perangkat Bergerak</strong>, Sistem Manajemen Keselamatan Kerja (K3) Service Parts Logistic Division (SPLD).
         </p>
       </div>
     </div>

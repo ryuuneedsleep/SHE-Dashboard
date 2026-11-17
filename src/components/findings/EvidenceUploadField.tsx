@@ -228,11 +228,11 @@ export const EvidenceUploadField: React.FC<EvidenceUploadFieldProps> = ({
         </button>
       )}
 
-      {/* Vercel Blob Private Storage Notice */}
+      {/* Private Storage Security Notice */}
       <div className="flex items-start gap-2 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-600 text-[11px] leading-relaxed">
         <ShieldCheck className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
         <span>
-          <strong>Penyimpanan Privat Aman:</strong> Foto bukti temuan K3 disimpan secara terenkripsi dan privat menggunakan <strong>Vercel Blob Private Storage</strong>. Hanya Administrator terautentikasi yang dapat mengakses dan melihat bukti foto ini.
+          <strong>Penyimpanan Privat Aman:</strong> Foto bukti temuan K3 disimpan secara terenkripsi dan privat. Hanya Administrator terautentikasi yang dapat mengakses dan melihat bukti foto ini.
         </span>
       </div>
     </div>

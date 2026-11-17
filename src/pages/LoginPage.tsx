@@ -4,7 +4,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { loginSchema, type LoginFormData } from '../utils/validation.ts';
 import { useAuth } from '../context/useAuth.ts';
-import { BrandLogo } from '../components/common/BrandLogo.tsx';
 import {
   Mail,
   Lock,
@@ -67,15 +66,12 @@ export const LoginPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-8 px-4 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md space-y-4">
-        {/* Brand & Title */}
-        <div className="text-center">
-          <div className="flex justify-center mb-2">
-            <BrandLogo />
-          </div>
-          <h2 className="text-2xl font-black text-slate-900 tracking-tight">
-            SPLD <span className="text-red-600">SAFETY</span>
-          </h2>
-          <p className="mt-1 text-xs text-slate-500 font-medium">
+        {/* Brand & Title (Clean Typography) */}
+        <div className="text-center space-y-1">
+          <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
+            SPLD <span className="text-[#EB0A1E]">SAFETY</span>
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 font-medium">
             Safety Management System • Progressive Web Application
           </p>
         </div>
@@ -83,7 +79,7 @@ export const LoginPage: React.FC = () => {
         {/* Security Badge */}
         <div className="bg-slate-100/80 border border-slate-200 rounded-xl p-2.5 flex items-center justify-center gap-2 text-xs text-slate-600 font-medium">
           <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-          <span>Autentikasi Terenkripsi & Sesi Database Neon</span>
+          <span>Autentikasi Aman & Terenkripsi</span>
         </div>
 
         {/* Login Card */}

@@ -209,7 +209,7 @@ export const DashboardPage: React.FC = () => {
               </div>
               <h3 className="text-sm font-bold text-slate-800">Belum Ada Temuan K3 Tercatat</h3>
               <p className="text-xs text-slate-500 max-w-md mx-auto">
-                Database Neon belum memiliki temuan aktif untuk filter yang dipilih. Silakan buat temuan K3 baru untuk mulai mencatat insiden dan kondisi bahaya.
+                Belum ada temuan K3 aktif untuk filter yang dipilih. Silakan buat temuan K3 baru untuk mulai mencatat insiden dan kondisi bahaya.
               </p>
             </div>
           ) : (

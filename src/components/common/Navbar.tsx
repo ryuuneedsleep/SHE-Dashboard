@@ -1,6 +1,5 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BrandLogo } from './BrandLogo.tsx';
 import { useAuth } from '../../context/useAuth.ts';
 import { LogOut, User } from 'lucide-react';
 
@@ -18,20 +17,17 @@ export const Navbar: React.FC = () => {
       {/* Main Navbar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-14">
-          {/* Brand Logo */}
+          {/* Brand Typography Header */}
           <div
-            className="flex items-center gap-2 cursor-pointer"
+            className="flex flex-col cursor-pointer select-none"
             onClick={() => navigate('/dashboard')}
           >
-            <BrandLogo />
-            <div className="flex flex-col">
-              <span className="text-base font-bold tracking-tight text-slate-900 leading-none">
-                SPLD <span className="text-red-600">SAFETY</span>
-              </span>
-              <span className="text-[10px] text-slate-500 font-medium">
-                K3 Safety Management PWA
-              </span>
-            </div>
+            <span className="text-base sm:text-lg font-black tracking-tight text-slate-900 leading-none">
+              SPLD <span className="text-[#EB0A1E]">SAFETY</span>
+            </span>
+            <span className="text-[10px] text-slate-500 font-medium tracking-wide mt-0.5">
+              Safety Management System
+            </span>
           </div>
 
           {/* User profile / Logout */}

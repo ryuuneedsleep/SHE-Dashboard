@@ -5,7 +5,6 @@ interface DashboardHeaderProps {
   lastUpdated: string;
   isRefreshing: boolean;
   onRefresh: () => void;
-  onResetDemoData?: () => void;
 }
 
 export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
@@ -22,7 +21,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
           </h1>
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
             <ShieldCheck className="w-3 h-3 text-emerald-600" />
-            LIVE NEON DB
+            SISTEM AKTIF
           </span>
         </div>
         <p className="text-xs text-slate-500 mt-0.5">
