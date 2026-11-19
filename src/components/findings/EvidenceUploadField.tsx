@@ -131,10 +131,10 @@ export const EvidenceUploadField: React.FC<EvidenceUploadFieldProps> = ({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <label className="block text-xs font-semibold text-slate-700 tracking-wide uppercase">
+        <label className="block text-xs font-semibold text-[#000000] tracking-wide uppercase">
           Dokumentasi Bukti / Foto Temuan ({evidences.length}/{maxFiles})
         </label>
-        <span className="text-[11px] text-slate-500 font-medium">Maks. 5 MB / foto (JPG, PNG, WebP)</span>
+        <span className="text-[11px] text-[#666666] font-medium">Maks. 5 MB / foto (JPG, PNG, WebP)</span>
       </div>
 
       {/* Hidden File Input */}
@@ -149,8 +149,8 @@ export const EvidenceUploadField: React.FC<EvidenceUploadFieldProps> = ({
 
       {/* Error alert */}
       {error && (
-        <div className="flex items-center gap-2 p-2.5 bg-rose-50 border border-rose-200 rounded-lg text-rose-700 text-xs">
-          <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
+        <div className="flex items-center gap-2 p-2.5 bg-[#FEF2F2] border border-[#FECACA] rounded-[4px] text-[#991B1B] text-xs">
+          <AlertCircle className="w-4 h-4 shrink-0 text-[#DC2626]" />
           <span>{error}</span>
         </div>
       )}
@@ -161,9 +161,9 @@ export const EvidenceUploadField: React.FC<EvidenceUploadFieldProps> = ({
           {evidences.map((item, index) => (
             <div
               key={item.id || index}
-              className="relative group bg-slate-50 border border-slate-200 rounded-xl overflow-hidden shadow-sm"
+              className="relative group bg-white border border-[#E5E7EB] rounded-[4px] overflow-hidden shadow-xs"
             >
-              <div className="relative aspect-video w-full bg-slate-100 overflow-hidden">
+              <div className="relative aspect-video w-full bg-[#F7F8FA] overflow-hidden">
                 <img
                   src={item.url}
                   alt={item.fileName}
@@ -179,7 +179,7 @@ export const EvidenceUploadField: React.FC<EvidenceUploadFieldProps> = ({
                       <button
                         type="button"
                         onClick={() => triggerReplace(index)}
-                        className="p-1 rounded-md bg-white/90 text-slate-700 hover:text-blue-600 hover:bg-white shadow transition"
+                        className="p-1 rounded-[4px] bg-white text-[#333333] hover:text-[#2563EB] hover:bg-[#EFF6FF] border border-[#E5E7EB] shadow-xs transition-colors cursor-pointer"
                         title="Ganti foto"
                       >
                         <RefreshCw className="w-3.5 h-3.5" />
@@ -187,7 +187,7 @@ export const EvidenceUploadField: React.FC<EvidenceUploadFieldProps> = ({
                       <button
                         type="button"
                         onClick={() => handleDelete(index)}
-                        className="p-1 rounded-md bg-white/90 text-slate-700 hover:text-red-600 hover:bg-white shadow transition"
+                        className="p-1 rounded-[4px] bg-white text-[#333333] hover:text-[#DC2626] hover:bg-[#FEF2F2] border border-[#E5E7EB] shadow-xs transition-colors cursor-pointer"
                         title="Hapus foto"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -197,10 +197,10 @@ export const EvidenceUploadField: React.FC<EvidenceUploadFieldProps> = ({
                 </div>
               </div>
               <div className="p-2 text-xs">
-                <p className="font-medium text-slate-800 truncate" title={item.fileName}>
+                <p className="font-medium text-[#000000] truncate" title={item.fileName}>
                   {item.fileName}
                 </p>
-                <p className="text-[10px] text-slate-500 mt-0.5">
+                <p className="text-[10px] text-[#666666] mt-0.5">
                   {formatBytes(item.fileSize)}
                 </p>
               </div>
@@ -214,15 +214,15 @@ export const EvidenceUploadField: React.FC<EvidenceUploadFieldProps> = ({
         <button
           type="button"
           onClick={triggerAdd}
-          className="w-full border-2 border-dashed border-slate-300 hover:border-red-400 bg-slate-50 hover:bg-red-50/30 rounded-xl p-4 flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer group"
+          className="w-full border-2 border-dashed border-[#E5E7EB] hover:border-[#9E2638] bg-white hover:bg-[#F8EDEF]/30 rounded-[6px] p-5 flex flex-col items-center justify-center gap-1.5 transition-colors cursor-pointer group"
         >
-          <div className="w-10 h-10 rounded-full bg-white group-hover:bg-red-100 flex items-center justify-center text-slate-400 group-hover:text-red-600 shadow-sm transition">
+          <div className="w-10 h-10 rounded-[4px] bg-[#F7F8FA] border border-[#E5E7EB] group-hover:border-[#9E2638] group-hover:bg-[#F8EDEF] flex items-center justify-center text-[#666666] group-hover:text-[#9E2638] transition-colors">
             <Camera className="w-5 h-5" />
           </div>
-          <span className="text-xs font-semibold text-slate-700 group-hover:text-red-600">
+          <span className="text-xs font-semibold text-[#333333] group-hover:text-[#9E2638]">
             {evidences.length === 0 ? 'Ambil atau Pilih Foto Bukti' : 'Tambah Foto Bukti Lainnya'}
           </span>
-          <span className="text-[11px] text-slate-500">
+          <span className="text-[11px] text-[#666666]">
             Format: JPG, PNG, atau WEBP (Maksimal {maxFiles} foto)
           </span>
         </button>
@@ -230,3 +230,5 @@ export const EvidenceUploadField: React.FC<EvidenceUploadFieldProps> = ({
     </div>
   );
 };
+
+export default EvidenceUploadField;

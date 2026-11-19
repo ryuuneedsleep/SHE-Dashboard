@@ -29,15 +29,15 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
     <div className="flex flex-col select-none">
       <span
         className={`${titleSizes[size]} ${
-          inverted ? 'text-white' : 'text-slate-900'
+          inverted ? 'text-white' : 'text-[#000000]'
         } leading-none`}
       >
-        SPLD <span className="text-[#EB0A1E]">SAFETY</span>
+        SPLD <span className="text-[#9E2638]">SAFETY</span>
       </span>
       {showSubtitle && (
         <span
           className={`${subSizes[size]} font-medium tracking-wide mt-0.5 ${
-            inverted ? 'text-slate-300' : 'text-slate-500'
+            inverted ? 'text-slate-300' : 'text-[#666666]'
           }`}
         >
           Safety Management System
@@ -48,4 +48,3 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
 };
 
 export default BrandLogo;
-

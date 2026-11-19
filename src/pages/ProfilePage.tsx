@@ -86,14 +86,14 @@ export const ProfilePage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-xl mx-auto space-y-6 pb-24">
+    <div className="max-w-xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+      <div className="flex items-center justify-between pb-3 border-b border-[#E5E7EB]">
         <div>
-          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          <h1 className="text-xl sm:text-2xl font-bold text-[#000000] tracking-tight">
             Profil Administrator
           </h1>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-[#666666]">
             Informasi akun dan status sesi aktif Administrator
           </p>
         </div>
@@ -101,25 +101,25 @@ export const ProfilePage: React.FC = () => {
 
       {/* Success Notification */}
       {successMessage && (
-        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-center gap-2 text-xs text-emerald-800">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+        <div className="bg-[#F0FDF4] border border-[#BBF7D0] rounded-[4px] p-3 flex items-center gap-2 text-xs text-[#15803D]">
+          <CheckCircle2 className="w-4 h-4 text-[#16A34A] shrink-0" />
           <span>{successMessage}</span>
         </div>
       )}
 
       {/* Profile Card */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        {/* Banner */}
-        <div className="h-24 bg-gradient-to-r from-red-600 to-rose-700 p-4 flex items-end justify-between">
-          <div className="w-16 h-16 rounded-full bg-white text-red-600 border-4 border-white shadow-md flex items-center justify-center font-bold text-xl translate-y-8">
+      <div className="bg-white rounded-[6px] border border-[#E5E7EB] shadow-xs overflow-hidden">
+        {/* Banner (Solid Primary Red #9E2638, No Gradient) */}
+        <div className="h-24 bg-[#9E2638] p-4 flex items-end justify-between">
+          <div className="w-16 h-16 rounded-[4px] bg-white text-[#9E2638] border-2 border-[#E5E7EB] shadow-xs flex items-center justify-center font-bold text-xl translate-y-8">
             <User className="w-8 h-8" />
           </div>
           <button
             type="button"
             onClick={handleOpenEdit}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/90 hover:bg-white text-slate-800 rounded-lg text-xs font-bold transition shadow-xs cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-[#F7F8FA] text-[#333333] border border-[#E5E7EB] rounded-[4px] text-xs font-semibold transition-colors shadow-xs cursor-pointer"
           >
-            <Edit3 className="w-3.5 h-3.5 text-red-600" />
+            <Edit3 className="w-3.5 h-3.5 text-[#9E2638]" />
             <span>Edit Profil</span>
           </button>
         </div>
@@ -127,52 +127,52 @@ export const ProfilePage: React.FC = () => {
         <div className="pt-10 p-5 space-y-4">
           <div className="flex items-start justify-between">
             <div>
-              <h2 className="text-base sm:text-lg font-bold text-slate-900">
+              <h2 className="text-base sm:text-lg font-bold text-[#000000]">
                 {user?.fullName || user?.name || 'Administrator'}
               </h2>
-              <p className="text-xs text-slate-500">
-                {user?.position || 'Safety Administrator'} • QSHE & Lead Safety
+              <p className="text-xs text-[#666666]">
+                {user?.position || 'Safety Administrator'} &bull; QSHE & Lead Safety
               </p>
             </div>
           </div>
 
           {/* View Details */}
-          <div className="space-y-3 pt-3 border-t border-slate-100 text-xs">
-            <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50">
-              <Mail className="w-4 h-4 text-slate-400 shrink-0" />
+          <div className="space-y-3 pt-3 border-t border-[#E5E7EB] text-xs">
+            <div className="flex items-center gap-3 p-3 rounded-[4px] bg-[#F7F8FA] border border-[#E5E7EB]">
+              <Mail className="w-4 h-4 text-[#666666] shrink-0" />
               <div className="flex-1 min-w-0">
-                <span className="text-[10px] text-slate-400 block uppercase font-bold">Email</span>
-                <span className="font-semibold text-slate-800 truncate block">
+                <span className="text-[10px] text-[#666666] block uppercase font-semibold">Email</span>
+                <span className="font-medium text-[#000000] truncate block">
                   {user?.email || '-'}
                 </span>
               </div>
             </div>
 
-            <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50">
-              <Phone className="w-4 h-4 text-slate-400 shrink-0" />
+            <div className="flex items-center gap-3 p-3 rounded-[4px] bg-[#F7F8FA] border border-[#E5E7EB]">
+              <Phone className="w-4 h-4 text-[#666666] shrink-0" />
               <div className="flex-1 min-w-0">
-                <span className="text-[10px] text-slate-400 block uppercase font-bold">Telepon</span>
-                <span className="font-semibold text-slate-800 block">
+                <span className="text-[10px] text-[#666666] block uppercase font-semibold">Telepon</span>
+                <span className="font-medium text-[#000000] block">
                   {user?.phone || 'Belum diisi'}
                 </span>
               </div>
             </div>
 
-            <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50">
-              <Briefcase className="w-4 h-4 text-slate-400 shrink-0" />
+            <div className="flex items-center gap-3 p-3 rounded-[4px] bg-[#F7F8FA] border border-[#E5E7EB]">
+              <Briefcase className="w-4 h-4 text-[#666666] shrink-0" />
               <div className="flex-1 min-w-0">
-                <span className="text-[10px] text-slate-400 block uppercase font-bold">Jabatan</span>
-                <span className="font-semibold text-slate-800 block">
+                <span className="text-[10px] text-[#666666] block uppercase font-semibold">Jabatan</span>
+                <span className="font-medium text-[#000000] block">
                   {user?.position || 'Lead Safety Officer'}
                 </span>
               </div>
             </div>
 
-            <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50">
-              <Building2 className="w-4 h-4 text-slate-400 shrink-0" />
+            <div className="flex items-center gap-3 p-3 rounded-[4px] bg-[#F7F8FA] border border-[#E5E7EB]">
+              <Building2 className="w-4 h-4 text-[#666666] shrink-0" />
               <div className="flex-1 min-w-0">
-                <span className="text-[10px] text-slate-400 block uppercase font-bold">Departemen</span>
-                <span className="font-semibold text-slate-800 block">
+                <span className="text-[10px] text-[#666666] block uppercase font-semibold">Departemen</span>
+                <span className="font-medium text-[#000000] block">
                   QSHE & Jiritsuka
                 </span>
               </div>
@@ -180,11 +180,11 @@ export const ProfilePage: React.FC = () => {
           </div>
 
           {/* Logout Section */}
-          <div className="pt-4 border-t border-slate-100 flex justify-end">
+          <div className="pt-4 border-t border-[#E5E7EB] flex justify-end">
             <button
               type="button"
               onClick={handleLogout}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded-xl text-xs font-bold transition cursor-pointer"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-[#FECACA] text-[#DC2626] hover:bg-[#FEF2F2] rounded-[4px] text-xs font-semibold transition-colors cursor-pointer"
             >
               <LogOut className="w-4 h-4" />
               <span>Keluar dari Sesi Administrator</span>
@@ -195,99 +195,109 @@ export const ProfilePage: React.FC = () => {
 
       {/* Edit Profile Modal */}
       {isEditing && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl border border-slate-200">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-              <div className="flex items-center gap-2 text-slate-900 font-bold text-sm">
-                <Edit3 className="w-4 h-4 text-red-600" />
-                <span>Edit Profil Administrator</span>
-              </div>
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-[6px] max-w-md w-full p-6 space-y-4 shadow-md border border-[#E5E7EB]">
+            <div className="flex items-center justify-between pb-2 border-b border-[#E5E7EB]">
+              <h3 className="font-bold text-sm text-[#000000]">Edit Profil Administrator</h3>
               <button
                 type="button"
                 onClick={() => setIsEditing(false)}
-                className="text-slate-400 hover:text-slate-600 cursor-pointer"
+                className="text-[#666666] hover:text-[#000000] cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             {updateError && (
-              <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-lg text-rose-700 text-xs flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+              <div className="p-3 bg-[#FEF2F2] border border-[#FECACA] rounded-[4px] text-[#991B1B] text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-[#DC2626] shrink-0" />
                 <span>{updateError}</span>
               </div>
             )}
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-3 text-xs">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">
-                  Nama Lengkap *
+                <label className="block text-xs font-semibold text-[#333333] mb-1">
+                  Nama Lengkap
                 </label>
                 <input
                   type="text"
                   {...register('name')}
-                  className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-red-500"
+                  className="w-full text-xs text-[#000000] rounded-[4px] border border-[#E5E7EB] py-2 px-3 bg-white focus:outline-none focus:border-[#9E2638] focus:ring-1 focus:ring-[#9E2638]"
                 />
                 {errors.name && (
-                  <p className="text-[11px] text-rose-600 mt-1">{errors.name.message}</p>
+                  <p className="text-[11px] text-[#DC2626] mt-1">{errors.name.message}</p>
                 )}
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">
-                  Email *
+                <label className="block text-xs font-semibold text-[#333333] mb-1">
+                  Email
                 </label>
                 <input
                   type="email"
                   {...register('email')}
-                  className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-red-500"
+                  className="w-full text-xs text-[#000000] rounded-[4px] border border-[#E5E7EB] py-2 px-3 bg-white focus:outline-none focus:border-[#9E2638] focus:ring-1 focus:ring-[#9E2638]"
                 />
                 {errors.email && (
-                  <p className="text-[11px] text-rose-600 mt-1">{errors.email.message}</p>
+                  <p className="text-[11px] text-[#DC2626] mt-1">{errors.email.message}</p>
                 )}
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-[#333333] mb-1">
                   Nomor Telepon
                 </label>
                 <input
                   type="text"
                   {...register('phone')}
-                  placeholder="081234567890"
-                  className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-red-500"
+                  className="w-full text-xs text-[#000000] rounded-[4px] border border-[#E5E7EB] py-2 px-3 bg-white focus:outline-none focus:border-[#9E2638] focus:ring-1 focus:ring-[#9E2638]"
                 />
                 {errors.phone && (
-                  <p className="text-[11px] text-rose-600 mt-1">{errors.phone.message}</p>
+                  <p className="text-[11px] text-[#DC2626] mt-1">{errors.phone.message}</p>
                 )}
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">
-                  Jabatan / Posisi
+                <label className="block text-xs font-semibold text-[#333333] mb-1">
+                  Jabatan
                 </label>
                 <input
                   type="text"
                   {...register('position')}
-                  className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-red-500"
+                  className="w-full text-xs text-[#000000] rounded-[4px] border border-[#E5E7EB] py-2 px-3 bg-white focus:outline-none focus:border-[#9E2638] focus:ring-1 focus:ring-[#9E2638]"
                 />
                 {errors.position && (
-                  <p className="text-[11px] text-rose-600 mt-1">{errors.position.message}</p>
+                  <p className="text-[11px] text-[#DC2626] mt-1">{errors.position.message}</p>
                 )}
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+              <div>
+                <label className="block text-xs font-semibold text-[#333333] mb-1">
+                  Departemen
+                </label>
+                <input
+                  type="text"
+                  {...register('department')}
+                  className="w-full text-xs text-[#000000] rounded-[4px] border border-[#E5E7EB] py-2 px-3 bg-white focus:outline-none focus:border-[#9E2638] focus:ring-1 focus:ring-[#9E2638]"
+                />
+                {errors.department && (
+                  <p className="text-[11px] text-[#DC2626] mt-1">{errors.department.message}</p>
+                )}
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#E5E7EB]">
                 <button
                   type="button"
                   onClick={() => setIsEditing(false)}
-                  className="px-3.5 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-[4px] border border-[#E5E7EB] bg-white hover:bg-[#F7F8FA] text-xs font-semibold text-[#333333] transition-colors cursor-pointer"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-4 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg transition disabled:opacity-50 inline-flex items-center gap-1.5 cursor-pointer"
+                  className="px-4 py-1.5 rounded-[4px] bg-[#9E2638] hover:bg-[#7F1F2E] text-white text-xs font-semibold transition-colors flex items-center gap-1.5 disabled:opacity-50 cursor-pointer shadow-xs"
                 >
                   <Save className="w-3.5 h-3.5" />
                   <span>{isSubmitting ? 'Menyimpan...' : 'Simpan Profil'}</span>

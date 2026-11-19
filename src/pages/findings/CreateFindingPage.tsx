@@ -20,6 +20,7 @@ import {
   AlertTriangle,
   MapPin,
   CheckCircle2,
+  Camera,
 } from 'lucide-react';
 
 export const CreateFindingPage: React.FC = () => {
@@ -103,22 +104,22 @@ export const CreateFindingPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6 pb-24">
+    <div className="max-w-2xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+      <div className="flex items-center justify-between pb-3 border-b border-[#E5E7EB]">
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => navigate('/findings')}
-            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition"
+            className="p-1.5 rounded-[4px] border border-[#E5E7EB] bg-white text-[#666666] hover:text-[#000000] hover:bg-[#F7F8FA] transition-colors cursor-pointer"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-4 h-4" />
           </button>
           <div>
-            <h1 className="text-xl font-bold text-slate-900 tracking-tight">
+            <h1 className="text-xl font-bold text-[#000000] tracking-tight">
               Buat Laporan Temuan K3
             </h1>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-[#666666]">
               Formulir pelaporan bahaya keselamatan kerja (Status awal otomatis OPEN)
             </p>
           </div>
@@ -126,45 +127,45 @@ export const CreateFindingPage: React.FC = () => {
       </div>
 
       {submitError && (
-        <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
+        <div className="p-3 bg-[#FEF2F2] border border-[#FECACA] rounded-[4px] text-[#991B1B] text-xs flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 shrink-0 text-[#DC2626]" />
           <span>{submitError}</span>
         </div>
       )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* Section 1: Reporter Information */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
-          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 uppercase tracking-wide border-b border-slate-100 pb-2">
-            <User className="w-4 h-4 text-red-600" />
+        <div className="bg-white rounded-[6px] border border-[#E5E7EB] shadow-xs p-5 space-y-4">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-[#000000] uppercase tracking-wide border-b border-[#E5E7EB] pb-2">
+            <User className="w-4 h-4 text-[#9E2638]" />
             <span>1. Informasi Pelapor</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Reporter Name */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Nama Pelapor <span className="text-red-500">*</span>
+              <label className="block text-xs font-semibold text-[#333333] mb-1">
+                Nama Pelapor <span className="text-[#DC2626]">*</span>
               </label>
               <input
                 type="text"
                 {...register('reporterName')}
                 placeholder="Nama lengkap pelapor"
-                className="w-full text-xs rounded-xl border border-slate-200 py-2 px-3 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-red-500"
+                className="w-full text-xs text-[#000000] rounded-[4px] border border-[#E5E7EB] py-2 px-3 bg-white focus:outline-none focus:border-[#9E2638] focus:ring-1 focus:ring-[#9E2638]"
               />
               {errors.reporterName && (
-                <p className="text-[11px] text-red-500 mt-1">{errors.reporterName.message}</p>
+                <p className="text-[11px] text-[#DC2626] mt-1">{errors.reporterName.message}</p>
               )}
             </div>
 
             {/* Department */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Departemen Pelapor <span className="text-red-500">*</span>
+              <label className="block text-xs font-semibold text-[#333333] mb-1">
+                Departemen Pelapor <span className="text-[#DC2626]">*</span>
               </label>
               <select
                 {...register('reporterDepartment')}
-                className="w-full text-xs rounded-xl border border-slate-200 py-2 px-3 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-red-500"
+                className="w-full text-xs text-[#000000] rounded-[4px] border border-[#E5E7EB] py-2 px-3 bg-white focus:outline-none focus:border-[#9E2638] focus:ring-1 focus:ring-[#9E2638]"
               >
                 {DEPARTMENT_LIST.map((dept) => (
                   <option key={dept} value={dept}>
@@ -173,95 +174,95 @@ export const CreateFindingPage: React.FC = () => {
                 ))}
               </select>
               {errors.reporterDepartment && (
-                <p className="text-[11px] text-red-500 mt-1">{errors.reporterDepartment.message}</p>
+                <p className="text-[11px] text-[#DC2626] mt-1">{errors.reporterDepartment.message}</p>
               )}
             </div>
 
             {/* Other Department Name (if Lain-lain) */}
             {selectedDepartment === 'Lain-lain' && (
               <div className="sm:col-span-2">
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Nama Departemen / Instansi Lain <span className="text-red-500">*</span>
+                <label className="block text-xs font-semibold text-[#333333] mb-1">
+                  Nama Departemen / Instansi Lain <span className="text-[#DC2626]">*</span>
                 </label>
                 <input
                   type="text"
                   {...register('otherDepartmentName')}
                   placeholder="Sebutkan nama divisi / departemen / vendor..."
-                  className="w-full text-xs rounded-xl border border-slate-200 py-2 px-3 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-red-500"
+                  className="w-full text-xs text-[#000000] rounded-[4px] border border-[#E5E7EB] py-2 px-3 bg-white focus:outline-none focus:border-[#9E2638] focus:ring-1 focus:ring-[#9E2638]"
                 />
                 {errors.otherDepartmentName && (
-                  <p className="text-[11px] text-red-500 mt-1">{errors.otherDepartmentName.message}</p>
+                  <p className="text-[11px] text-[#DC2626] mt-1">{errors.otherDepartmentName.message}</p>
                 )}
               </div>
             )}
 
             {/* Reporter Section / Area */}
             <div className="sm:col-span-2">
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Section / Area Pelapor <span className="text-red-500">*</span>
+              <label className="block text-xs font-semibold text-[#333333] mb-1">
+                Section / Area Pelapor <span className="text-[#DC2626]">*</span>
               </label>
               <input
                 type="text"
                 {...register('reporterSection')}
                 placeholder="Contoh: Inbound Storage Section, Line 3 Unit"
-                className="w-full text-xs rounded-xl border border-slate-200 py-2 px-3 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-red-500"
+                className="w-full text-xs text-[#000000] rounded-[4px] border border-[#E5E7EB] py-2 px-3 bg-white focus:outline-none focus:border-[#9E2638] focus:ring-1 focus:ring-[#9E2638]"
               />
               {errors.reporterSection && (
-                <p className="text-[11px] text-red-500 mt-1">{errors.reporterSection.message}</p>
+                <p className="text-[11px] text-[#DC2626] mt-1">{errors.reporterSection.message}</p>
               )}
             </div>
           </div>
         </div>
 
         {/* Section 2: Finding Information */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
-          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 uppercase tracking-wide border-b border-slate-100 pb-2">
-            <AlertTriangle className="w-4 h-4 text-red-600" />
+        <div className="bg-white rounded-[6px] border border-[#E5E7EB] shadow-xs p-5 space-y-4">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-[#000000] uppercase tracking-wide border-b border-[#E5E7EB] pb-2">
+            <AlertTriangle className="w-4 h-4 text-[#9E2638]" />
             <span>2. Informasi Temuan</span>
           </div>
 
           <div className="space-y-4">
             {/* Title */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Judul Temuan <span className="text-red-500">*</span>
+              <label className="block text-xs font-semibold text-[#333333] mb-1">
+                Judul Temuan <span className="text-[#DC2626]">*</span>
               </label>
               <input
                 type="text"
                 {...register('title')}
                 placeholder="Ringkasan temuan bahaya..."
-                className="w-full text-xs rounded-xl border border-slate-200 py-2 px-3 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-red-500"
+                className="w-full text-xs text-[#000000] rounded-[4px] border border-[#E5E7EB] py-2 px-3 bg-white focus:outline-none focus:border-[#9E2638] focus:ring-1 focus:ring-[#9E2638]"
               />
               {errors.title && (
-                <p className="text-[11px] text-red-500 mt-1">{errors.title.message}</p>
+                <p className="text-[11px] text-[#DC2626] mt-1">{errors.title.message}</p>
               )}
             </div>
 
             {/* Description */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Deskripsi Temuan <span className="text-red-500">*</span>
+              <label className="block text-xs font-semibold text-[#333333] mb-1">
+                Deskripsi Temuan <span className="text-[#DC2626]">*</span>
               </label>
               <textarea
                 rows={3}
                 {...register('description')}
                 placeholder="Jelaskan kondisi atau tindakan tidak aman secara spesifik..."
-                className="w-full text-xs rounded-xl border border-slate-200 py-2 px-3 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-red-500"
+                className="w-full text-xs text-[#000000] rounded-[4px] border border-[#E5E7EB] py-2 px-3 bg-white focus:outline-none focus:border-[#9E2638] focus:ring-1 focus:ring-[#9E2638]"
               />
               {errors.description && (
-                <p className="text-[11px] text-red-500 mt-1">{errors.description.message}</p>
+                <p className="text-[11px] text-[#DC2626] mt-1">{errors.description.message}</p>
               )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Finding Category */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Kategori Temuan <span className="text-red-500">*</span>
+                <label className="block text-xs font-semibold text-[#333333] mb-1">
+                  Kategori Temuan <span className="text-[#DC2626]">*</span>
                 </label>
                 <select
                   {...register('findingCategory')}
-                  className="w-full text-xs rounded-xl border border-slate-200 py-2 px-3 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-red-500"
+                  className="w-full text-xs text-[#000000] rounded-[4px] border border-[#E5E7EB] py-2 px-3 bg-white focus:outline-none focus:border-[#9E2638] focus:ring-1 focus:ring-[#9E2638]"
                 >
                   {FINDING_CATEGORY_OPTIONS.map((c) => (
                     <option key={c.value} value={c.value}>
@@ -270,18 +271,18 @@ export const CreateFindingPage: React.FC = () => {
                   ))}
                 </select>
                 {errors.findingCategory && (
-                  <p className="text-[11px] text-red-500 mt-1">{errors.findingCategory.message}</p>
+                  <p className="text-[11px] text-[#DC2626] mt-1">{errors.findingCategory.message}</p>
                 )}
               </div>
 
               {/* Hazard Category (Optional) */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-[#333333] mb-1">
                   Kategori Bahaya (Opsional)
                 </label>
                 <select
                   {...register('hazardCategory')}
-                  className="w-full text-xs rounded-xl border border-slate-200 py-2 px-3 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-red-500"
+                  className="w-full text-xs text-[#000000] rounded-[4px] border border-[#E5E7EB] py-2 px-3 bg-white focus:outline-none focus:border-[#9E2638] focus:ring-1 focus:ring-[#9E2638]"
                 >
                   <option value="">Pilih Kategori Bahaya</option>
                   {HAZARD_CATEGORY_OPTIONS.map((h) => (
@@ -294,12 +295,12 @@ export const CreateFindingPage: React.FC = () => {
 
               {/* Risk Level */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Tingkat Risiko <span className="text-red-500">*</span>
+                <label className="block text-xs font-semibold text-[#333333] mb-1">
+                  Tingkat Risiko <span className="text-[#DC2626]">*</span>
                 </label>
                 <select
                   {...register('riskLevel')}
-                  className="w-full text-xs rounded-xl border border-slate-200 py-2 px-3 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-red-500"
+                  className="w-full text-xs text-[#000000] rounded-[4px] border border-[#E5E7EB] py-2 px-3 bg-white focus:outline-none focus:border-[#9E2638] focus:ring-1 focus:ring-[#9E2638]"
                 >
                   {RISK_LEVEL_OPTIONS.map((r) => (
                     <option key={r.value} value={r.value}>
@@ -308,22 +309,22 @@ export const CreateFindingPage: React.FC = () => {
                   ))}
                 </select>
                 {errors.riskLevel && (
-                  <p className="text-[11px] text-red-500 mt-1">{errors.riskLevel.message}</p>
+                  <p className="text-[11px] text-[#DC2626] mt-1">{errors.riskLevel.message}</p>
                 )}
               </div>
 
               {/* Finding Date */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Tanggal Temuan <span className="text-red-500">*</span>
+                <label className="block text-xs font-semibold text-[#333333] mb-1">
+                  Tanggal Temuan <span className="text-[#DC2626]">*</span>
                 </label>
                 <input
                   type="date"
                   {...register('findingDate')}
-                  className="w-full text-xs rounded-xl border border-slate-200 py-2 px-3 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-red-500"
+                  className="w-full text-xs text-[#000000] rounded-[4px] border border-[#E5E7EB] py-2 px-3 bg-white focus:outline-none focus:border-[#9E2638] focus:ring-1 focus:ring-[#9E2638]"
                 />
                 {errors.findingDate && (
-                  <p className="text-[11px] text-red-500 mt-1">{errors.findingDate.message}</p>
+                  <p className="text-[11px] text-[#DC2626] mt-1">{errors.findingDate.message}</p>
                 )}
               </div>
             </div>
@@ -331,21 +332,21 @@ export const CreateFindingPage: React.FC = () => {
         </div>
 
         {/* Section 3: Location */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
-          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 uppercase tracking-wide border-b border-slate-100 pb-2">
-            <MapPin className="w-4 h-4 text-red-600" />
+        <div className="bg-white rounded-[6px] border border-[#E5E7EB] shadow-xs p-5 space-y-4">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-[#000000] uppercase tracking-wide border-b border-[#E5E7EB] pb-2">
+            <MapPin className="w-4 h-4 text-[#9E2638]" />
             <span>3. Lokasi Temuan</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Operational Area */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Area Operasional <span className="text-red-500">*</span>
+              <label className="block text-xs font-semibold text-[#333333] mb-1">
+                Area Operasional <span className="text-[#DC2626]">*</span>
               </label>
               <select
                 {...register('operationalArea')}
-                className="w-full text-xs rounded-xl border border-slate-200 py-2 px-3 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-red-500"
+                className="w-full text-xs text-[#000000] rounded-[4px] border border-[#E5E7EB] py-2 px-3 bg-white focus:outline-none focus:border-[#9E2638] focus:ring-1 focus:ring-[#9E2638]"
               >
                 {OPERATIONAL_AREA_LIST.map((area) => (
                   <option key={area} value={area}>
@@ -354,63 +355,68 @@ export const CreateFindingPage: React.FC = () => {
                 ))}
               </select>
               {errors.operationalArea && (
-                <p className="text-[11px] text-red-500 mt-1">{errors.operationalArea.message}</p>
+                <p className="text-[11px] text-[#DC2626] mt-1">{errors.operationalArea.message}</p>
               )}
             </div>
 
             {/* Location Detail */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Detail Lokasi <span className="text-red-500">*</span>
+              <label className="block text-xs font-semibold text-[#333333] mb-1">
+                Detail Lokasi <span className="text-[#DC2626]">*</span>
               </label>
               <input
                 type="text"
                 {...register('locationDetail')}
                 placeholder="Contoh: Lorong B2 Rak 3, Stasiun Las 02"
-                className="w-full text-xs rounded-xl border border-slate-200 py-2 px-3 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-red-500"
+                className="w-full text-xs text-[#000000] rounded-[4px] border border-[#E5E7EB] py-2 px-3 bg-white focus:outline-none focus:border-[#9E2638] focus:ring-1 focus:ring-[#9E2638]"
               />
               {errors.locationDetail && (
-                <p className="text-[11px] text-red-500 mt-1">{errors.locationDetail.message}</p>
+                <p className="text-[11px] text-[#DC2626] mt-1">{errors.locationDetail.message}</p>
               )}
             </div>
           </div>
         </div>
 
         {/* Section 4: Corrective Action (Optional) */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
-          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 uppercase tracking-wide border-b border-slate-100 pb-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+        <div className="bg-white rounded-[6px] border border-[#E5E7EB] shadow-xs p-5 space-y-4">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-[#000000] uppercase tracking-wide border-b border-[#E5E7EB] pb-2">
+            <CheckCircle2 className="w-4 h-4 text-[#16A34A]" />
             <span>4. Rencana Tindakan Perbaikan (Opsional)</span>
           </div>
 
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-[#333333] mb-1">
                 Rencana Tindakan Perbaikan
               </label>
               <textarea
                 rows={2}
                 {...register('correctiveAction')}
                 placeholder="Tindakan yang perlu dilakukan untuk menghilangkan bahaya..."
-                className="w-full text-xs rounded-xl border border-slate-200 py-2 px-3 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-red-500"
+                className="w-full text-xs text-[#000000] rounded-[4px] border border-[#E5E7EB] py-2 px-3 bg-white focus:outline-none focus:border-[#9E2638] focus:ring-1 focus:ring-[#9E2638]"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-[#333333] mb-1">
                 Target Selesai (Due Date)
               </label>
               <input
                 type="date"
                 {...register('dueDate')}
-                className="w-full text-xs rounded-xl border border-slate-200 py-2 px-3 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-red-500"
+                className="w-full text-xs text-[#000000] rounded-[4px] border border-[#E5E7EB] py-2 px-3 bg-white focus:outline-none focus:border-[#9E2638] focus:ring-1 focus:ring-[#9E2638]"
               />
             </div>
           </div>
         </div>
 
         {/* Section 5: Evidence Upload (Max 3 Photos) */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+        <div className="bg-white rounded-[6px] border border-[#E5E7EB] shadow-xs p-5 space-y-4">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-[#000000] uppercase tracking-wide border-b border-[#E5E7EB] pb-2">
+            <Camera className="w-4 h-4 text-[#9E2638]" />
+            <span>5. Dokumentasi Foto Bukti</span>
+          </div>
+
           <EvidenceUploadField
             evidences={evidences}
             onChange={setEvidences}
@@ -424,14 +430,14 @@ export const CreateFindingPage: React.FC = () => {
           <button
             type="button"
             onClick={() => navigate('/findings')}
-            className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition"
+            className="px-4 py-2.5 rounded-[4px] border border-[#E5E7EB] bg-white hover:bg-[#F7F8FA] text-[#333333] text-xs font-semibold transition-colors cursor-pointer"
           >
             Batal
           </button>
           <button
             type="submit"
             disabled={isSubmitting}
-            className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold shadow-sm transition hover:shadow flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+            className="px-5 py-2.5 rounded-[4px] bg-[#9E2638] hover:bg-[#7F1F2E] text-white text-xs font-semibold shadow-xs transition-colors flex items-center gap-2 disabled:opacity-50 cursor-pointer"
           >
             <Save className="w-4 h-4" />
             <span>{isSubmitting ? (uploadStatus || 'Menyimpan...') : 'Kirim Laporan Temuan'}</span>
@@ -441,3 +447,5 @@ export const CreateFindingPage: React.FC = () => {
     </div>
   );
 };
+
+export default CreateFindingPage;

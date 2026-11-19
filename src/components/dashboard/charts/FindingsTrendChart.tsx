@@ -11,20 +11,20 @@ export const FindingsTrendChart: React.FC<FindingsTrendChartProps> = ({ data }) 
 
   if (!data || data.length === 0 || data.every((d) => d.count === 0)) {
     return (
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col justify-between h-full">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+      <div className="bg-white rounded-[6px] shadow-xs border border-[#E5E7EB] p-5 flex flex-col justify-between h-full">
+        <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-3">
           <div className="flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-red-600" />
-            <h3 className="text-sm font-bold text-slate-900 tracking-tight">
+            <TrendingUp className="w-4 h-4 text-[#9E2638]" />
+            <h3 className="text-sm font-bold text-[#000000] tracking-tight">
               Monthly Finding Trend
             </h3>
           </div>
-          <span className="text-[11px] text-slate-400">Tren Laporan Bulanan</span>
+          <span className="text-[11px] text-[#666666]">Tren Laporan Bulanan</span>
         </div>
-        <div className="h-56 flex flex-col items-center justify-center text-center p-6 text-slate-400 space-y-2">
-          <AlertCircle className="w-8 h-8 text-slate-300" />
-          <p className="text-xs font-semibold text-slate-600">Belum ada data pada periode ini</p>
-          <p className="text-[11px] text-slate-400 max-w-xs">
+        <div className="h-56 flex flex-col items-center justify-center text-center p-6 text-[#666666] space-y-2">
+          <AlertCircle className="w-8 h-8 text-[#E5E7EB]" />
+          <p className="text-xs font-semibold text-[#333333]">Belum ada data pada periode ini</p>
+          <p className="text-[11px] text-[#666666] max-w-xs">
             Sesuaikan filter untuk melihat tren laporan temuan K3 secara historis.
           </p>
         </div>
@@ -55,15 +55,15 @@ export const FindingsTrendChart: React.FC<FindingsTrendChartProps> = ({ data }) 
   const areaD = `${pathD} L ${points[points.length - 1].x} ${svgHeight - paddingY} L ${points[0].x} ${svgHeight - paddingY} Z`;
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col justify-between">
-      <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+    <div className="bg-white rounded-[6px] shadow-xs border border-[#E5E7EB] p-5 flex flex-col justify-between">
+      <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-3 mb-4">
         <div className="flex items-center gap-2">
-          <TrendingUp className="w-4 h-4 text-red-600" />
-          <h3 className="text-sm font-bold text-slate-900 tracking-tight">
+          <TrendingUp className="w-4 h-4 text-[#9E2638]" />
+          <h3 className="text-sm font-bold text-[#000000] tracking-tight">
             Monthly Finding Trend
           </h3>
         </div>
-        <span className="text-[11px] text-slate-400 font-medium">Laporan Masuk per Bulan</span>
+        <span className="text-[11px] text-[#666666] font-medium">Laporan Masuk per Bulan</span>
       </div>
 
       <div className="relative w-full overflow-hidden">
@@ -71,13 +71,6 @@ export const FindingsTrendChart: React.FC<FindingsTrendChartProps> = ({ data }) 
           viewBox={`0 0 ${svgWidth} ${svgHeight}`}
           className="w-full h-56 select-none overflow-visible"
         >
-          <defs>
-            <linearGradient id="trendGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#EF4444" stopOpacity="0.25" />
-              <stop offset="100%" stopColor="#EF4444" stopOpacity="0.0" />
-            </linearGradient>
-          </defs>
-
           {/* Grid lines */}
           {[0, 0.25, 0.5, 0.75, 1].map((pct, idx) => {
             const y = svgHeight - paddingY - pct * chartHeight;
@@ -89,14 +82,14 @@ export const FindingsTrendChart: React.FC<FindingsTrendChartProps> = ({ data }) 
                   y1={y}
                   x2={svgWidth - paddingX}
                   y2={y}
-                  stroke="#E2E8F0"
+                  stroke="#E5E7EB"
                   strokeDasharray="4 4"
                 />
                 <text
                   x={paddingX - 10}
                   y={y + 4}
                   textAnchor="end"
-                  className="text-[10px] fill-slate-400 font-mono"
+                  className="text-[10px] fill-[#666666] font-mono"
                 >
                   {labelVal}
                 </text>
@@ -104,35 +97,45 @@ export const FindingsTrendChart: React.FC<FindingsTrendChartProps> = ({ data }) 
             );
           })}
 
-          {/* Area fill */}
-          <path d={areaD} fill="url(#trendGradient)" />
+          {/* Solid Semi-Transparent Area (Strictly No Gradient) */}
+          <path d={areaD} fill="rgba(158, 38, 56, 0.08)" />
 
-          {/* Line stroke */}
+          {/* Trend Line (Solid Primary Red #9E2638) */}
           <path
             d={pathD}
             fill="none"
-            stroke="#DC2626"
-            strokeWidth="3"
+            stroke="#9E2638"
+            strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
           />
 
           {/* Data Points */}
           {points.map((p, i) => (
-            <g key={i}>
+            <g
+              key={i}
+              className="cursor-pointer"
+              onMouseEnter={() => setHoveredIndex(i)}
+              onMouseLeave={() => setHoveredIndex(null)}
+            >
               <circle
                 cx={p.x}
                 cy={p.y}
-                r={hoveredIndex === i ? 6 : 4}
-                className="fill-white stroke-red-600 stroke-[2.5] cursor-pointer transition-all duration-150"
-                onMouseEnter={() => setHoveredIndex(i)}
-                onMouseLeave={() => setHoveredIndex(null)}
+                r={hoveredIndex === i ? 5 : 3.5}
+                fill="#FFFFFF"
+                stroke="#9E2638"
+                strokeWidth="2"
+                className="transition-all duration-150"
               />
+              {/* Invisible larger hit target */}
+              <circle cx={p.x} cy={p.y} r={16} fill="transparent" />
+
+              {/* X Axis Labels */}
               <text
                 x={p.x}
                 y={svgHeight - 10}
                 textAnchor="middle"
-                className="text-[10px] fill-slate-500 font-medium"
+                className="text-[10px] fill-[#666666] font-medium"
               >
                 {p.data.month}
               </text>
@@ -143,24 +146,20 @@ export const FindingsTrendChart: React.FC<FindingsTrendChartProps> = ({ data }) 
         {/* Hover Tooltip */}
         {hoveredIndex !== null && points[hoveredIndex] && (
           <div
-            className="absolute bg-slate-900 text-white text-xs px-2.5 py-1.5 rounded-lg shadow-lg pointer-events-none transform -translate-x-1/2 -translate-y-full z-10"
+            className="absolute pointer-events-none -translate-x-1/2 -translate-y-full bg-[#000000] text-white text-[11px] px-2.5 py-1 rounded-[4px] shadow-sm z-10 font-medium"
             style={{
               left: `${(points[hoveredIndex].x / svgWidth) * 100}%`,
-              top: `${(points[hoveredIndex].y / svgHeight) * 100 - 8}%`,
+              top: `${(points[hoveredIndex].y / svgHeight) * 100}%`,
+              marginTop: '-8px',
             }}
           >
-            <div className="font-bold text-[11px] text-slate-200">
-              {points[hoveredIndex].data.month}
-            </div>
-            <div className="text-[11px] text-red-300">
-              Total: {points[hoveredIndex].data.count} temuan
-            </div>
-            <div className="text-[10px] text-slate-400">
-              Selesai: {points[hoveredIndex].data.closedCount} | Terbuka: {points[hoveredIndex].data.openCount}
-            </div>
+            <div className="font-bold">{points[hoveredIndex].data.month}</div>
+            <div>{points[hoveredIndex].data.count} Temuan</div>
           </div>
         )}
       </div>
     </div>
   );
 };
+
+export default FindingsTrendChart;

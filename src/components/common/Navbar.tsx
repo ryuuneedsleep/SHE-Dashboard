@@ -13,7 +13,7 @@ export const Navbar: React.FC = () => {
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
+    <header className="sticky top-0 z-40 bg-white border-b border-[#E5E7EB]">
       {/* Main Navbar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-14">
@@ -22,23 +22,23 @@ export const Navbar: React.FC = () => {
             className="flex flex-col cursor-pointer select-none"
             onClick={() => navigate('/dashboard')}
           >
-            <span className="text-base sm:text-lg font-black tracking-tight text-slate-900 leading-none">
-              SPLD <span className="text-[#EB0A1E]">SAFETY</span>
+            <span className="text-base sm:text-lg font-black tracking-tight text-[#000000] leading-none">
+              SPLD <span className="text-[#9E2638]">SAFETY</span>
             </span>
-            <span className="text-[10px] text-slate-500 font-medium tracking-wide mt-0.5">
+            <span className="text-[10px] text-[#666666] font-medium tracking-wide mt-0.5">
               Safety Management System
             </span>
           </div>
 
           {/* User profile / Logout */}
           {user && (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5">
               <button
                 type="button"
                 onClick={() => navigate('/profile')}
-                className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors text-xs text-slate-700"
+                className="flex items-center gap-2 px-2.5 py-1.5 rounded-[4px] border border-[#E5E7EB] bg-white hover:bg-[#F7F8FA] transition-colors text-xs text-[#333333] cursor-pointer"
               >
-                <div className="w-6 h-6 rounded-full bg-red-100 text-red-600 flex items-center justify-center font-bold text-xs">
+                <div className="w-5 h-5 rounded-[4px] bg-[#F8EDEF] text-[#9E2638] flex items-center justify-center font-bold text-xs">
                   <User className="w-3.5 h-3.5" />
                 </div>
                 <span className="hidden sm:inline font-medium">
@@ -49,7 +49,7 @@ export const Navbar: React.FC = () => {
               <button
                 type="button"
                 onClick={handleLogout}
-                className="p-1.5 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                className="p-1.5 rounded-[4px] border border-[#E5E7EB] text-[#666666] hover:text-[#9E2638] hover:bg-[#F8EDEF] transition-colors cursor-pointer"
                 title="Keluar (Logout)"
                 aria-label="Logout"
               >

@@ -57,9 +57,9 @@ const RootRedirect: React.FC = () => {
  */
 const AuthenticatedLayout: React.FC = () => {
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 antialiased selection:bg-red-500 selection:text-white">
+    <div className="min-h-screen flex flex-col bg-[#F7F8FA] text-[#000000] antialiased selection:bg-[#9E2638] selection:text-white">
       <Navbar />
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 pb-24">
         <Suspense fallback={<PageLoadingFallback />}>
           <Outlet />
         </Suspense>

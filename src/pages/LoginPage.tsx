@@ -4,12 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { loginSchema, type LoginFormData } from '../utils/validation.ts';
 import { useAuth } from '../context/useAuth.ts';
-import {
-  Mail,
-  Lock,
-  AlertCircle,
-  ArrowRight,
-} from 'lucide-react';
+import { Mail, Lock, AlertCircle, ArrowRight } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -63,70 +58,70 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-8 px-4 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md space-y-4">
+    <div className="min-h-screen bg-[#F7F8FA] flex flex-col justify-center py-10 px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-[420px] mx-auto space-y-6">
         {/* Brand & Title (Clean Typography) */}
-        <div className="text-center space-y-1">
-          <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
-            SPLD <span className="text-[#EB0A1E]">SAFETY</span>
+        <div className="text-center space-y-1.5">
+          <h1 className="text-3xl font-black text-[#000000] tracking-tight">
+            SPLD <span className="text-[#9E2638]">SAFETY</span>
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 font-medium">
+          <p className="text-xs text-[#666666] font-medium tracking-wide">
             Safety Management System
           </p>
         </div>
 
         {/* Login Card */}
-        <div className="bg-white py-6 px-6 shadow-sm border border-slate-200 rounded-2xl sm:px-8 space-y-5">
+        <div className="bg-white py-8 px-6 sm:px-8 shadow-xs border border-[#E5E7EB] rounded-[6px] space-y-5">
           {errorMessage && (
-            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+            <div className="p-3 bg-[#FEF2F2] border border-[#FECACA] rounded-[4px] text-[#991B1B] text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 text-[#DC2626]" />
               <span>{errorMessage}</span>
             </div>
           )}
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-[#333333] mb-1.5">
                 Email Administrator
               </label>
               <div className="relative">
-                <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Mail className="w-4 h-4 text-[#666666] absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="email"
                   {...register('email')}
                   placeholder="admin@spld-safety.test"
                   autoComplete="email"
-                  className="w-full text-xs rounded-xl border border-slate-200 pl-9 pr-3 py-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-red-500"
+                  className="w-full text-xs text-[#000000] rounded-[4px] border border-[#E5E7EB] pl-9 pr-3 py-2.5 bg-white focus:outline-none focus:border-[#9E2638] focus:ring-1 focus:ring-[#9E2638] transition-colors"
                 />
               </div>
               {errors.email && (
-                <p className="text-[11px] text-red-500 mt-1">{errors.email.message}</p>
+                <p className="text-[11px] text-[#DC2626] mt-1">{errors.email.message}</p>
               )}
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-[#333333] mb-1.5">
                 Password
               </label>
               <div className="relative">
-                <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Lock className="w-4 h-4 text-[#666666] absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="password"
                   {...register('password')}
                   placeholder="••••••••••••"
                   autoComplete="current-password"
-                  className="w-full text-xs rounded-xl border border-slate-200 pl-9 pr-3 py-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-red-500"
+                  className="w-full text-xs text-[#000000] rounded-[4px] border border-[#E5E7EB] pl-9 pr-3 py-2.5 bg-white focus:outline-none focus:border-[#9E2638] focus:ring-1 focus:ring-[#9E2638] transition-colors"
                 />
               </div>
               {errors.password && (
-                <p className="text-[11px] text-red-500 mt-1">{errors.password.message}</p>
+                <p className="text-[11px] text-[#DC2626] mt-1">{errors.password.message}</p>
               )}
             </div>
 
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-2.5 px-4 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold shadow-sm transition hover:shadow flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+              className="w-full py-2.5 px-4 bg-[#9E2638] hover:bg-[#7F1F2E] text-white rounded-[4px] text-xs font-semibold shadow-xs transition-colors flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
             >
               <span>{isSubmitting ? 'Memverifikasi Sesi...' : 'Masuk ke Dashboard'}</span>
               <ArrowRight className="w-4 h-4" />

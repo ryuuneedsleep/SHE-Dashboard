@@ -15,16 +15,16 @@ export const DashboardFiltersBar: React.FC<DashboardFiltersProps> = ({
   onReset,
 }) => {
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 space-y-3">
-      <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-        <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 uppercase tracking-wider">
-          <Filter className="w-3.5 h-3.5 text-red-600" />
+    <div className="bg-white rounded-[6px] shadow-xs border border-[#E5E7EB] p-4 space-y-3">
+      <div className="flex items-center justify-between pb-2 border-b border-[#E5E7EB]">
+        <div className="flex items-center gap-1.5 text-xs font-bold text-[#000000] uppercase tracking-wider">
+          <Filter className="w-3.5 h-3.5 text-[#9E2638]" />
           <span>Filter Data Dashboard</span>
         </div>
         <button
           type="button"
           onClick={onReset}
-          className="text-xs text-slate-500 hover:text-red-600 flex items-center gap-1 transition-colors cursor-pointer"
+          className="text-xs text-[#666666] hover:text-[#9E2638] flex items-center gap-1 transition-colors cursor-pointer"
         >
           <RotateCcw className="w-3 h-3" />
           <span>Reset Filter</span>
@@ -34,8 +34,8 @@ export const DashboardFiltersBar: React.FC<DashboardFiltersProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {/* Department Filter */}
         <div>
-          <label className="block text-[11px] font-semibold text-slate-600 mb-1 flex items-center gap-1">
-            <Building2 className="w-3 h-3 text-slate-400" />
+          <label className="block text-[11px] font-semibold text-[#333333] mb-1 flex items-center gap-1">
+            <Building2 className="w-3 h-3 text-[#666666]" />
             <span>Departemen Pelapor</span>
           </label>
           <select
@@ -46,7 +46,7 @@ export const DashboardFiltersBar: React.FC<DashboardFiltersProps> = ({
                 department: e.target.value as DashboardFilters['department'],
               })
             }
-            className="w-full text-xs rounded-lg border border-slate-200 py-1.5 px-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-red-500"
+            className="w-full text-xs rounded-[4px] border border-[#E5E7EB] py-1.5 px-2.5 bg-white text-[#000000] focus:outline-none focus:border-[#9E2638] focus:ring-1 focus:ring-[#9E2638]"
           >
             <option value="ALL">Semua Departemen</option>
             {DEPARTMENT_LIST.map((d) => (
@@ -59,8 +59,8 @@ export const DashboardFiltersBar: React.FC<DashboardFiltersProps> = ({
 
         {/* Operational Area Filter */}
         <div>
-          <label className="block text-[11px] font-semibold text-slate-600 mb-1 flex items-center gap-1">
-            <MapPin className="w-3 h-3 text-slate-400" />
+          <label className="block text-[11px] font-semibold text-[#333333] mb-1 flex items-center gap-1">
+            <MapPin className="w-3 h-3 text-[#666666]" />
             <span>Area Operasional Temuan</span>
           </label>
           <select
@@ -71,7 +71,7 @@ export const DashboardFiltersBar: React.FC<DashboardFiltersProps> = ({
                 operationalArea: e.target.value,
               })
             }
-            className="w-full text-xs rounded-lg border border-slate-200 py-1.5 px-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-red-500"
+            className="w-full text-xs rounded-[4px] border border-[#E5E7EB] py-1.5 px-2.5 bg-white text-[#000000] focus:outline-none focus:border-[#9E2638] focus:ring-1 focus:ring-[#9E2638]"
           >
             <option value="ALL">Semua Area Operasional</option>
             {OPERATIONAL_AREA_LIST.map((a) => (
@@ -85,8 +85,8 @@ export const DashboardFiltersBar: React.FC<DashboardFiltersProps> = ({
         {/* Date Filter (Start Date to End Date) */}
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="block text-[11px] font-semibold text-slate-600 mb-1 flex items-center gap-1">
-              <Calendar className="w-3 h-3 text-slate-400" />
+            <label className="block text-[11px] font-semibold text-[#333333] mb-1 flex items-center gap-1">
+              <Calendar className="w-3 h-3 text-[#666666]" />
               <span>Dari Tanggal</span>
             </label>
             <input
@@ -98,13 +98,14 @@ export const DashboardFiltersBar: React.FC<DashboardFiltersProps> = ({
                   startDate: e.target.value || undefined,
                 })
               }
-              className="w-full text-xs rounded-lg border border-slate-200 py-1.5 px-2 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-red-500"
+              className="w-full text-xs rounded-[4px] border border-[#E5E7EB] py-1.5 px-2 bg-white text-[#000000] focus:outline-none focus:border-[#9E2638] focus:ring-1 focus:ring-[#9E2638]"
             />
           </div>
+
           <div>
-            <label className="block text-[11px] font-semibold text-slate-600 mb-1 flex items-center gap-1">
-              <Calendar className="w-3 h-3 text-slate-400" />
-              <span>Sampai</span>
+            <label className="block text-[11px] font-semibold text-[#333333] mb-1 flex items-center gap-1">
+              <Calendar className="w-3 h-3 text-[#666666]" />
+              <span>Sampai Tanggal</span>
             </label>
             <input
               type="date"
@@ -115,7 +116,7 @@ export const DashboardFiltersBar: React.FC<DashboardFiltersProps> = ({
                   endDate: e.target.value || undefined,
                 })
               }
-              className="w-full text-xs rounded-lg border border-slate-200 py-1.5 px-2 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-red-500"
+              className="w-full text-xs rounded-[4px] border border-[#E5E7EB] py-1.5 px-2 bg-white text-[#000000] focus:outline-none focus:border-[#9E2638] focus:ring-1 focus:ring-[#9E2638]"
             />
           </div>
         </div>
@@ -123,3 +124,5 @@ export const DashboardFiltersBar: React.FC<DashboardFiltersProps> = ({
     </div>
   );
 };
+
+export default DashboardFiltersBar;

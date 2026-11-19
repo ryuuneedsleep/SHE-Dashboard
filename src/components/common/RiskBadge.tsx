@@ -14,42 +14,42 @@ export const RiskBadge: React.FC<RiskBadgeProps> = ({ level, size = 'sm' }) => {
   > = {
     LOW: {
       label: 'Low',
-      bg: 'bg-emerald-50',
-      text: 'text-emerald-700',
-      border: 'border-emerald-200',
-      icon: <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />,
+      bg: 'bg-[#F0FDF4]',
+      text: 'text-[#15803D]',
+      border: 'border-[#BBF7D0]',
+      icon: <ShieldCheck className="w-3.5 h-3.5 text-[#16A34A]" />,
     },
     MEDIUM: {
       label: 'Medium',
-      bg: 'bg-amber-50',
-      text: 'text-amber-800',
-      border: 'border-amber-200',
-      icon: <AlertCircle className="w-3.5 h-3.5 text-amber-600" />,
+      bg: 'bg-[#FEFCE8]',
+      text: 'text-[#854D0E]',
+      border: 'border-[#FEF08A]',
+      icon: <AlertCircle className="w-3.5 h-3.5 text-[#EAB308]" />,
     },
     HIGH: {
       label: 'High',
-      bg: 'bg-orange-50',
-      text: 'text-orange-800',
-      border: 'border-orange-200',
-      icon: <AlertTriangle className="w-3.5 h-3.5 text-orange-600" />,
+      bg: 'bg-[#FFF7ED]',
+      text: 'text-[#9A3412]',
+      border: 'border-[#FED7AA]',
+      icon: <AlertTriangle className="w-3.5 h-3.5 text-[#EA580C]" />,
     },
     CRITICAL: {
       label: 'Critical',
-      bg: 'bg-red-50',
-      text: 'text-red-700',
-      border: 'border-red-200',
-      icon: <ShieldAlert className="w-3.5 h-3.5 text-red-600" />,
+      bg: 'bg-[#FEF2F2]',
+      text: 'text-[#991B1B]',
+      border: 'border-[#FECACA]',
+      icon: <ShieldAlert className="w-3.5 h-3.5 text-[#DC2626]" />,
     },
   };
 
   const normKey = (level || 'LOW').toUpperCase();
   const current = configs[normKey] || configs.LOW;
   const sizeClasses =
-    size === 'sm' ? 'text-xs px-2 py-0.5 gap-1' : 'text-xs font-semibold px-2.5 py-1 gap-1.5';
+    size === 'sm' ? 'text-[11px] px-2 py-0.5 gap-1 font-medium' : 'text-xs font-semibold px-2.5 py-1 gap-1.5';
 
   return (
     <span
-      className={`inline-flex items-center rounded-full border ${current.bg} ${current.text} ${current.border} ${sizeClasses}`}
+      className={`inline-flex items-center rounded-[4px] border ${current.bg} ${current.text} ${current.border} ${sizeClasses}`}
     >
       {current.icon}
       <span>{current.label}</span>

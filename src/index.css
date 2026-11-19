@@ -1,17 +1,45 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: 'Panton', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  --color-primary-red: #9E2638;
+  --color-primary-red-hover: #7F1F2E;
+  --color-primary-red-light: #F8EDEF;
+  --color-neutral-white: #FFFFFF;
+  --color-neutral-black: #000000;
+  --color-dark-gray: #333333;
+  --color-medium-gray: #666666;
+  --color-light-gray: #E5E7EB;
+  --color-soft-bg: #F7F8FA;
+
+  --color-status-open: #D97706;
+  --color-status-in-progress: #2563EB;
+  --color-status-closed: #16A34A;
+
+  --color-risk-low: #16A34A;
+  --color-risk-medium: #EAB308;
+  --color-risk-high: #EA580C;
+  --color-risk-critical: #DC2626;
+
+  --radius-card: 6px;
+  --radius-element: 4px;
+}
+
 @layer base {
   :root {
-    --primary-red: #EB0A1E;
-    --primary-red-hover: #C80818;
+    --primary-red: #9E2638;
+    --primary-red-hover: #7F1F2E;
+    --primary-red-light: #F8EDEF;
     --dark-bg: #111827;
     --dark-surface: #1F2937;
   }
 
   body {
-    background-color: #F8FAFC;
-    color: #0F172A;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-color: #F7F8FA;
+    color: #000000;
+    font-family: 'Panton', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
